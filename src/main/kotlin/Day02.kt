@@ -1,6 +1,6 @@
-const val RED = "red"
-const val GREEN = "green"
-const val BLUE = "blue"
+private const val RED = "red"
+private const val GREEN = "green"
+private const val BLUE = "blue"
 
 fun main() {
 
@@ -36,7 +36,7 @@ fun main() {
         return sum
     }
 
-    fun part2(input: List<String>): Int = input.sumOf { line ->
+    fun part2(lines: List<String>): Int = lines.sumOf { line ->
         val counts = mutableMapOf(
             RED to 0,
             GREEN to 0,

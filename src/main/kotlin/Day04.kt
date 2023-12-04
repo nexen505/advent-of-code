@@ -99,11 +99,11 @@ fun main() {
      * Take a seat in the large pile of colorful cards. How many points are they worth in total?
      *
      */
-    fun part2(input: List<String>): Long {
+    fun part2(lines: List<String>): Long {
         var res = 0L
-        val cc = LongArray(input.size) { 1 }
+        val cc = LongArray(lines.size) { 1 }
 
-        for ((idx, card) in input.withIndex()) {
+        for ((idx, card) in lines.withIndex()) {
             val c = cc[idx]
 
             res += c

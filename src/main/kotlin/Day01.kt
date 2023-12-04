@@ -32,7 +32,7 @@ fun main() {
         "$firstDigit$lastDigit".toInt()
     }
 
-    fun part2(input: List<String>): Int = input.sumOf { line ->
+    fun part2(lines: List<String>): Int = lines.sumOf { line ->
         val length = line.length
         val digits = mutableListOf<Int>()
         var i = 0
