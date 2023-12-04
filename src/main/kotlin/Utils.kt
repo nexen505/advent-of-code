@@ -6,7 +6,13 @@ import kotlin.io.path.readLines
 /**
  * Reads lines from the given input txt file.
  */
-fun readInput(name: String) = Path("src/$name.txt").readLines()
+fun readInput(name: String) = Thread
+    .currentThread()
+    .contextClassLoader
+    .getResource("$name.txt")!!
+    .readText()
+    .lines()
+    .filter { it.isNotBlank() }
 
 /**
  * Converts string to md5 hash.
