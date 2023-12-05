@@ -6,17 +6,17 @@ fun main() {
         dest.toLong() to start.toLong()..<start.toLong() + step.toLong()
     }
 
-    fun getValues(keys: Iterable<Long>, map: Map<Long, OpenEndRange<Long>>): List<Long> = keys.map { key ->
-        map.entries
-            .firstOrNull() { key in it.value }
-            ?.let { it.key + key - it.value.start }
-            ?: key
-    }
+    fun Map<Long, OpenEndRange<Long>>.getKey(value: Long) = this.entries
+        .firstOrNull() { value in it.value }
+        ?.let { it.key + value - it.value.start }
+        ?: value
 
-    fun parseMaps(lines: List<String>): List<Map<Long, OpenEndRange<Long>>> {
-        val maps = mutableListOf<Map<Long, OpenEndRange<Long>>>()
+    fun Map<Long, OpenEndRange<Long>>.getKeys(values: Iterable<Long>): List<Long> = values.map { getKey(it) }
+    fun Map<Long, OpenEndRange<Long>>.getKeys(values: Sequence<Long>): Sequence<Long> = values.map { getKey(it) }
 
+    fun parseMaps(lines: List<String>): Sequence<Map<Long, OpenEndRange<Long>>> = sequence {
         var i = 2
+
         do {
             val mapLines = mutableListOf<String>()
             while (i < lines.size && !lines[i].trim().endsWith("map:")) {
@@ -27,10 +27,8 @@ fun main() {
             }
 
             val map = parseMap(mapLines)
-            maps.add(map)
+            yield(map)
         } while (++i < lines.size)
-
-        return maps
     }
 
     /**
@@ -143,7 +141,7 @@ fun main() {
             .split(" ")
             .map { it.toLong() }
         val maps = parseMaps(lines)
-        val result = maps.fold(seeds) { res, map -> getValues(res, map) }
+        val result = maps.fold(seeds) { values, map -> map.getKeys(values) }
 
         return result.min()
     }
@@ -172,20 +170,17 @@ fun main() {
             .substringAfter("seeds: ")
             .split(" ")
             .map { it.toLong() }
-        val maps = parseMaps(lines)
+        val maps = parseMaps(lines).toList()
 
-        var min = Long.MAX_VALUE
+        return seeds
+            .asSequence()
+            .chunked(2)
+            .flatMap { (start, step) ->
+                val initial = (start..<start + step).asSequence()
 
-        val chunks = seeds.chunked(2)
-        for ((start, step) in chunks) {
-            val range: Iterable<Long> = start..<start + step
-            val result = maps.fold(range) { res, map -> getValues(res, map) }
-            val curMin = result.min()
-
-            min = minOf(min, curMin)
-        }
-
-        return min
+                maps.fold(initial) { values, map -> map.getKeys(values) }
+            }
+            .min()
     }
 
     val testInput = readInput("Day05_test")
