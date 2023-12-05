@@ -1,3 +1,5 @@
+import java.util.PriorityQueue
+
 fun main() {
 
     fun parseMap(lines: List<String>): Map<Long, OpenEndRange<Long>> = lines.associate {
@@ -22,7 +24,7 @@ fun main() {
             while (i < lines.size && !lines[i].trim().endsWith("map:")) {
                 val mapLine = lines[i]
 
-                mapLines.add(mapLine)
+                mapLines += mapLine
                 ++i
             }
 
@@ -146,6 +148,60 @@ fun main() {
         return result.min()
     }
 
+    @Suppress("unused")
+    fun part2BruteForce(seeds: List<Long>, maps: Sequence<Map<Long, OpenEndRange<Long>>>): Long {
+        return seeds
+            .asSequence()
+            .chunked(2)
+            .flatMap { (start, step) ->
+                val initial = (start..<start + step).asSequence()
+
+                maps.fold(initial) { values, map -> map.getKeys(values) }
+            }
+            .min()
+    }
+
+    fun Map<Long, OpenEndRange<Long>>.map(input: Pair<Long, Long>): Sequence<Pair<Long, Long>> = sequence {
+        val (x1, x2) = input
+
+        val intersections = PriorityQueue<Pair<Long, Long>>(Comparator.comparingLong { it.first })
+        for ((dest, range) in this@map) {
+            val y1 = maxOf(x1, range.start)
+            val y2 = minOf(x2, range.endExclusive - 1)
+
+            if (y1 <= y2) {
+                intersections.add(y1 to y2)
+                yield(y1 + dest - range.start to y2 + dest - range.start)
+            }
+        }
+
+        var cur = x1
+        while (intersections.isNotEmpty()) {
+            val (y1, y2) = intersections.poll()
+            if (y1 > cur) {
+                yield(cur to y1 - 1)
+            }
+
+            cur = y2 + 1
+        }
+
+        if (cur <= x2) {
+            yield(cur to x2)
+        }
+    }
+
+    fun part2Optimized(seeds: List<Long>, maps: Sequence<Map<Long, OpenEndRange<Long>>>): Long {
+        return seeds
+            .asSequence()
+            .chunked(2)
+            .flatMap { (start, step) ->
+                val initial = sequenceOf(start to start + step - 1)
+
+                maps.fold(initial) { res, map -> res.flatMap { map.map(it) } }
+            }
+            .minOf { it.first }
+    }
+
     /**
      * --- Part Two ---
      *
@@ -170,17 +226,9 @@ fun main() {
             .substringAfter("seeds: ")
             .split(" ")
             .map { it.toLong() }
-        val maps = parseMaps(lines).toList()
+        val maps = parseMaps(lines)
 
-        return seeds
-            .asSequence()
-            .chunked(2)
-            .flatMap { (start, step) ->
-                val initial = (start..<start + step).asSequence()
-
-                maps.fold(initial) { values, map -> map.getKeys(values) }
-            }
-            .min()
+        return part2Optimized(seeds, maps)
     }
 
     val testInput = readInput("Day05_test")
