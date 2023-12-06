@@ -30,18 +30,10 @@ fun main() {
                 return 1
             }
 
-            val left = (time - sqrt(d)) / 2
-            var min = ceil(left).toLong()
-            if (min.toDouble() == left) {
-                ++min
-            }
-
-            val right = (time + sqrt(d)) / 2
-            var max = floor(right).toLong()
-            if (max.toDouble() == right) {
-                --max
-            }
-
+            val x1 = (time - sqrt(d)) / 2
+            val min = floor(x1 + 1).toLong()
+            val x2 = (time + sqrt(d)) / 2
+            val max = ceil(x2 - 1).toLong()
             val ways = max - min + 1
 
             res * ways
