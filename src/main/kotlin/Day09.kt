@@ -10,6 +10,7 @@ fun main() {
         var current = this
         do {
             current = current.windowed(2) { (a, b) -> b - a }
+
             sum += current.last()
         } while (current.any { it != 0L })
 
@@ -87,17 +88,16 @@ fun main() {
         .sumOf { it.extrapolate() }
 
     fun List<Long>.extrapolateBackwards(): Long {
-        var result = first()
-        var signum = -1
+        val values = mutableListOf(first())
 
         var current = this
         do {
             current = current.windowed(2) { (a, b) -> b - a }
-            result += signum * current.first()
-            signum *= -1
+
+            values.add(current.first())
         } while (current.any { it != 0L })
 
-        return result
+        return values.reversed().fold(0L) { res, v -> v - res }
     }
 
     /**
