@@ -1,6 +1,5 @@
 import java.util.*
 
-
 const val VERTICAL_PIPE = '|'
 const val HORIZONTAL_PIPE = '-'
 const val NORTH_EAST = 'L'
@@ -8,14 +7,13 @@ const val NORTH_WEST = 'J'
 const val SOUTH_WEST = '7'
 const val SOUTH_EAST = 'F'
 const val START = 'S'
+const val GROUND = '.'
 
 fun main() {
 
     data class Graph(val adj: Array<LinkedHashSet<Int>>, val start: Int) {
 
-        fun findCycleLength(): Int? {
-            var len = 0
-
+        fun findCycle(): Set<Int> {
             val visited = BooleanArray(adj.size * adj.size) { it == start }
             val parent = IntArray(visited.size) { -1 }
             val stack = LinkedList(listOf(start))
@@ -28,14 +26,28 @@ fun main() {
                         visited[v] = true
                         stack.add(v)
                         parent[v] = u
-                        ++len
                     } else if (parent[u] != v) {
-                        return len + 1
+                        val cycle = parent
+                            .asSequence()
+                            .withIndex()
+                            .filter { it.value != -1 }
+                            .map { it.index }
+                            .toMutableSet()
+
+                        cycle.add(start)
+
+                        return cycle
                     }
                 }
             }
 
-            return null
+            error("There is not cycles")
+        }
+
+        fun findCycleLength(): Int {
+            val cycle = findCycle()
+
+            return cycle.size
         }
 
     }
@@ -133,7 +145,7 @@ fun main() {
         val graph = lines.toGraph()
         val cycleLength = graph.findCycleLength()
 
-        return cycleLength!! / 2
+        return cycleLength / 2
     }
 
     /**
@@ -231,9 +243,45 @@ fun main() {
      */
     fun part2(lines: List<String>): Int {
         val graph = lines.toGraph()
-        val cycleLength = graph.findCycleLength()
+        val cycle = graph.findCycle()
+        val excluded = cycle.toMutableSet()
+        val size = lines.size
 
-        return cycleLength!! / 2
+        for ((i, line) in lines.withIndex()) {
+            val fixedLine = (0..<size).joinToString("") { j ->
+                val cur = (i to j).flatten(size)
+
+                if (cur in cycle) line[j].toString() else GROUND.toString()
+            }
+            var isInside = false
+            var up: Boolean? = null
+
+            for ((j, c) in fixedLine.withIndex()) {
+                when (c) {
+                    VERTICAL_PIPE -> {
+                        isInside = !isInside
+                    }
+
+                    NORTH_EAST, SOUTH_EAST -> {
+                        up = c == NORTH_EAST
+                    }
+
+                    NORTH_WEST, SOUTH_WEST -> {
+                        val expected = if (up != null && up) NORTH_WEST else SOUTH_WEST
+                        if (c != expected) {
+                            isInside = !isInside
+                        }
+                        up = null
+                    }
+                }
+
+                if (!isInside) {
+                    excluded.add((i to j).flatten(size))
+                }
+            }
+        }
+
+        return size * size - excluded.size
     }
 
     val testInput1 = readInput("Day10_test")
