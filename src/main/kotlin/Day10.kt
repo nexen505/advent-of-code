@@ -1,3 +1,6 @@
+import java.util.*
+
+
 const val VERTICAL_PIPE = '|'
 const val HORIZONTAL_PIPE = '-'
 const val NORTH_EAST = 'L'
@@ -9,34 +12,35 @@ const val START = 'S'
 fun main() {
 
     data class Graph(val adj: Array<LinkedHashSet<Int>>, val start: Int) {
+
         fun findCycleLength(): Int? {
-            val visited = BooleanArray(adj.size * adj.size)
+            var len = 0
 
-            return findCycle(start, visited, null, 0)
-        }
+            val visited = BooleanArray(adj.size * adj.size) { it == start }
+            val parent = IntArray(visited.size) { -1 }
+            val stack = LinkedList(listOf(start))
 
-        private fun findCycle(v: Int, visited: BooleanArray, parent: Int?, length: Int): Int? {
-            visited[v] = true
+            while (stack.isNotEmpty()) {
+                val u = stack.poll()
 
-            for (i in adj[v]) {
-                if (!visited[i]) {
-                    val res = findCycle(i, visited, v, length + 1)
-
-                    if (res != null) {
-                        return res
+                for (v in adj[u]) {
+                    if (!visited[v]) {
+                        visited[v] = true
+                        stack.add(v)
+                        parent[v] = u
+                        ++len
+                    } else if (parent[u] != v) {
+                        return len + 1
                     }
-                } else if (i != parent) {
-                    return length + 1
                 }
             }
 
             return null
         }
+
     }
 
     fun Pair<Int, Int>.flatten(size: Int): Int = first * size + second
-
-    fun List<String>.getChar(i: Int, j: Int) = this[i][j]
 
     fun List<String>.toGraph(): Graph {
         val adj = Array(size * size) { linkedSetOf<Int>() }
@@ -48,66 +52,66 @@ fun main() {
 
                 when (c) {
                     VERTICAL_PIPE -> {
-                        if (i >= 1 && getChar(i - 1, j) in setOf(VERTICAL_PIPE, SOUTH_WEST, SOUTH_EAST, START)) {
+                        if (i >= 1 && this[i - 1][j] in setOf(VERTICAL_PIPE, SOUTH_WEST, SOUTH_EAST, START)) {
                             adj[(i - 1 to j).flatten(size)].add(current)
                             adj[current].add((i - 1 to j).flatten(size))
                         }
-                        if (i <= size - 2 && getChar(i + 1, j) in setOf(VERTICAL_PIPE, NORTH_WEST, NORTH_EAST, START)) {
+                        if (i <= size - 2 && this[i + 1][j] in setOf(VERTICAL_PIPE, NORTH_WEST, NORTH_EAST, START)) {
                             adj[(i + 1 to j).flatten(size)].add(current)
                             adj[current].add((i + 1 to j).flatten(size))
                         }
                     }
 
                     HORIZONTAL_PIPE -> {
-                        if (j >= 1 && getChar(i, j - 1) in setOf(HORIZONTAL_PIPE, NORTH_EAST, SOUTH_EAST, START)) {
+                        if (j >= 1 && this[i][j - 1] in setOf(HORIZONTAL_PIPE, NORTH_EAST, SOUTH_EAST, START)) {
                             adj[(i to j - 1).flatten(size)].add(current)
                             adj[current].add((i to j - 1).flatten(size))
                         }
-                        if (j <= size - 2 && getChar(i, j + 1) in setOf(HORIZONTAL_PIPE, NORTH_WEST, SOUTH_WEST, START)) {
+                        if (j <= size - 2 && this[i][j + 1] in setOf(HORIZONTAL_PIPE, NORTH_WEST, SOUTH_WEST, START)) {
                             adj[(i to j + 1).flatten(size)].add(current)
                             adj[current].add((i to j + 1).flatten(size))
                         }
                     }
 
                     NORTH_EAST -> {
-                        if (i >= 1 && getChar(i - 1, j) in setOf(VERTICAL_PIPE, SOUTH_WEST, SOUTH_EAST, START)) {
+                        if (i >= 1 && this[i - 1][j] in setOf(VERTICAL_PIPE, SOUTH_WEST, SOUTH_EAST, START)) {
                             adj[(i - 1 to j).flatten(size)].add(current)
                             adj[current].add((i - 1 to j).flatten(size))
                         }
-                        if (j <= size - 2 && getChar(i, j + 1) in setOf(HORIZONTAL_PIPE, NORTH_WEST, SOUTH_WEST, START)) {
+                        if (j <= size - 2 && this[i][j + 1] in setOf(HORIZONTAL_PIPE, NORTH_WEST, SOUTH_WEST, START)) {
                             adj[(i to j + 1).flatten(size)].add(current)
                             adj[current].add((i to j + 1).flatten(size))
                         }
                     }
 
                     NORTH_WEST -> {
-                        if (i >= 1 && getChar(i - 1, j) in setOf(VERTICAL_PIPE, SOUTH_WEST, SOUTH_EAST, START)) {
+                        if (i >= 1 && this[i - 1][j] in setOf(VERTICAL_PIPE, SOUTH_WEST, SOUTH_EAST, START)) {
                             adj[(i - 1 to j).flatten(size)].add(current)
                             adj[current].add((i - 1 to j).flatten(size))
                         }
-                        if (j >= 1 && getChar(i, j - 1) in setOf(HORIZONTAL_PIPE, NORTH_EAST, SOUTH_EAST, START)) {
+                        if (j >= 1 && this[i][j - 1] in setOf(HORIZONTAL_PIPE, NORTH_EAST, SOUTH_EAST, START)) {
                             adj[(i to j - 1).flatten(size)].add(current)
                             adj[current].add((i to j - 1).flatten(size))
                         }
                     }
 
                     SOUTH_EAST -> {
-                        if (i <= size - 2 && getChar(i + 1, j) in setOf(VERTICAL_PIPE, NORTH_WEST, NORTH_EAST, START)) {
+                        if (i <= size - 2 && this[i + 1][j] in setOf(VERTICAL_PIPE, NORTH_WEST, NORTH_EAST, START)) {
                             adj[(i + 1 to j).flatten(size)].add(current)
                             adj[current].add((i + 1 to j).flatten(size))
                         }
-                        if (j <= size - 2 && getChar(i, j + 1) in setOf(HORIZONTAL_PIPE, NORTH_WEST, SOUTH_WEST, START)) {
+                        if (j <= size - 2 && this[i][j + 1] in setOf(HORIZONTAL_PIPE, NORTH_WEST, SOUTH_WEST, START)) {
                             adj[(i to j + 1).flatten(size)].add(current)
                             adj[current].add((i to j + 1).flatten(size))
                         }
                     }
 
                     SOUTH_WEST -> {
-                        if (i <= size - 2 && getChar(i + 1, j) in setOf(VERTICAL_PIPE, NORTH_WEST, NORTH_EAST, START)) {
+                        if (i <= size - 2 && this[i + 1][j] in setOf(VERTICAL_PIPE, NORTH_WEST, NORTH_EAST, START)) {
                             adj[(i + 1 to j).flatten(size)].add(current)
                             adj[current].add((i + 1 to j).flatten(size))
                         }
-                        if (j >= 1 && getChar(i, j - 1) in setOf(HORIZONTAL_PIPE, NORTH_EAST, SOUTH_EAST, START)) {
+                        if (j >= 1 && this[i][j - 1] in setOf(HORIZONTAL_PIPE, NORTH_EAST, SOUTH_EAST, START)) {
                             adj[(i to j - 1).flatten(size)].add(current)
                             adj[current].add((i to j - 1).flatten(size))
                         }
@@ -225,10 +229,16 @@ fun main() {
      *
      * Figure out whether you have time to search for the nest by calculating the area within the loop. How many tiles are enclosed by the loop?
      */
-    fun part2(lines: List<String>): Int = lines.size
+    fun part2(lines: List<String>): Int {
+        val graph = lines.toGraph()
+        val cycleLength = graph.findCycleLength()
+
+        return cycleLength!! / 2
+    }
 
     val testInput1 = readInput("Day10_test")
     val testInput2 = readInput("Day10_test2")
+    val testInput3 = readInput("Day10_test3")
     val input1 = readInput("Day10")
     val input2 = readInput("Day10")
 
@@ -236,6 +246,8 @@ fun main() {
     check(part1(testInput2) == 8)
     part1(input1).println()
 
-    check(part2(testInput2) == 2)
+    check(part2(testInput1) == 1)
+    check(part2(testInput2) == 1)
+    check(part2(testInput3) == 4)
     part2(input2).println()
 }
