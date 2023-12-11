@@ -2,136 +2,155 @@ package aoc_2023
 
 import println
 import readInput
-import java.util.LinkedList
 
 private const val VERTICAL_PIPE = '|'
 private const val HORIZONTAL_PIPE = '-'
-private const val NORTH_EAST = 'L'
 private const val NORTH_WEST = 'J'
+private const val NORTH_EAST = 'L'
 private const val SOUTH_WEST = '7'
 private const val SOUTH_EAST = 'F'
 private const val START = 'S'
 private const val GROUND = '.'
 
-private data class Pipes(val adjacency: List<LinkedHashSet<Int>>, val start: Int) {
-
-    fun findCycle(): Set<Int> {
-        val visited = BooleanArray(adjacency.size * adjacency.size) { it == start }
-        val parent = IntArray(visited.size) { -1 }
-        val stack = LinkedList(listOf(start))
-
-        while (stack.isNotEmpty()) {
-            val u = stack.poll()
-
-            for (v in adjacency[u]) {
-                if (!visited[v]) {
-                    visited[v] = true
-                    stack.add(v)
-                    parent[v] = u
-                } else if (parent[u] != v) {
-                    val cycle = parent
-                        .asSequence()
-                        .withIndex()
-                        .filter { it.value != -1 }
-                        .map { it.index }
-                        .toMutableSet()
-
-                    cycle.add(start)
-
-                    return cycle
-                }
-            }
-        }
-
-        error("There is not cycles")
-    }
-
+private enum class Direction {
+    NORTH, EAST, SOUTH, WEST
 }
 
 private fun Pair<Int, Int>.flatten(size: Int): Int = first * size + second
 
-private fun List<String>.parsePipes(): Pipes {
-    val adjacency = MutableList(size * size) { linkedSetOf<Int>() }
-    val start = withIndex()
-        .map { (i, line) -> i to line.indexOf(START) }
-        .first { it.second != -1 }
-        .let { (i, j) -> (i to j).flatten(size) }
+private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
 
-    for ((i, line) in withIndex()) {
-        for ((j, c) in line.withIndex()) {
-            val current = (i to j).flatten(size)
+    private val size: Int
+        get() = lines.size
 
-            when (c) {
-                VERTICAL_PIPE -> {
-                    if (i >= 1 && this[i - 1][j] in setOf(VERTICAL_PIPE, SOUTH_WEST, SOUTH_EAST, START)) {
-                        adjacency[(i - 1 to j).flatten(size)].add(current)
-                        adjacency[current].add((i - 1 to j).flatten(size))
-                    }
-                    if (i <= size - 2 && this[i + 1][j] in setOf(VERTICAL_PIPE, NORTH_WEST, NORTH_EAST, START)) {
-                        adjacency[(i + 1 to j).flatten(size)].add(current)
-                        adjacency[current].add((i + 1 to j).flatten(size))
-                    }
+    fun findCycle(): Set<Int> {
+        val cycle = linkedSetOf(start.flatten(size))
+        var (curCh, curDir) = calculateInitialState()
+        var curCoords = start
+
+        do {
+            val (nextCoords, nextDir) = when (curCh) {
+                VERTICAL_PIPE -> when (curDir) {
+                    Direction.NORTH -> (curCoords.first - 1 to curCoords.second) to curDir
+                    Direction.SOUTH -> (curCoords.first + 1 to curCoords.second) to curDir
+                    else -> error("Incorrect state")
                 }
 
-                HORIZONTAL_PIPE -> {
-                    if (j >= 1 && this[i][j - 1] in setOf(HORIZONTAL_PIPE, NORTH_EAST, SOUTH_EAST, START)) {
-                        adjacency[(i to j - 1).flatten(size)].add(current)
-                        adjacency[current].add((i to j - 1).flatten(size))
-                    }
-                    if (j <= size - 2 && this[i][j + 1] in setOf(HORIZONTAL_PIPE, NORTH_WEST, SOUTH_WEST, START)) {
-                        adjacency[(i to j + 1).flatten(size)].add(current)
-                        adjacency[current].add((i to j + 1).flatten(size))
-                    }
+                HORIZONTAL_PIPE -> when (curDir) {
+                    Direction.WEST -> (curCoords.first to curCoords.second - 1) to curDir
+                    Direction.EAST -> (curCoords.first to curCoords.second + 1) to curDir
+                    else -> error("Incorrect state")
                 }
 
-                NORTH_EAST -> {
-                    if (i >= 1 && this[i - 1][j] in setOf(VERTICAL_PIPE, SOUTH_WEST, SOUTH_EAST, START)) {
-                        adjacency[(i - 1 to j).flatten(size)].add(current)
-                        adjacency[current].add((i - 1 to j).flatten(size))
-                    }
-                    if (j <= size - 2 && this[i][j + 1] in setOf(HORIZONTAL_PIPE, NORTH_WEST, SOUTH_WEST, START)) {
-                        adjacency[(i to j + 1).flatten(size)].add(current)
-                        adjacency[current].add((i to j + 1).flatten(size))
-                    }
+                NORTH_WEST -> when (curDir) {
+                    Direction.SOUTH -> (curCoords.first to curCoords.second - 1) to Direction.WEST
+                    Direction.EAST -> (curCoords.first - 1 to curCoords.second) to Direction.NORTH
+                    else -> error("Incorrect state")
                 }
 
-                NORTH_WEST -> {
-                    if (i >= 1 && this[i - 1][j] in setOf(VERTICAL_PIPE, SOUTH_WEST, SOUTH_EAST, START)) {
-                        adjacency[(i - 1 to j).flatten(size)].add(current)
-                        adjacency[current].add((i - 1 to j).flatten(size))
-                    }
-                    if (j >= 1 && this[i][j - 1] in setOf(HORIZONTAL_PIPE, NORTH_EAST, SOUTH_EAST, START)) {
-                        adjacency[(i to j - 1).flatten(size)].add(current)
-                        adjacency[current].add((i to j - 1).flatten(size))
-                    }
+                NORTH_EAST -> when (curDir) {
+                    Direction.SOUTH -> (curCoords.first to curCoords.second + 1) to Direction.EAST
+                    Direction.WEST -> (curCoords.first - 1 to curCoords.second) to Direction.NORTH
+                    else -> error("Incorrect state")
                 }
 
-                SOUTH_EAST -> {
-                    if (i <= size - 2 && this[i + 1][j] in setOf(VERTICAL_PIPE, NORTH_WEST, NORTH_EAST, START)) {
-                        adjacency[(i + 1 to j).flatten(size)].add(current)
-                        adjacency[current].add((i + 1 to j).flatten(size))
-                    }
-                    if (j <= size - 2 && this[i][j + 1] in setOf(HORIZONTAL_PIPE, NORTH_WEST, SOUTH_WEST, START)) {
-                        adjacency[(i to j + 1).flatten(size)].add(current)
-                        adjacency[current].add((i to j + 1).flatten(size))
-                    }
+                SOUTH_WEST -> when (curDir) {
+                    Direction.NORTH -> (curCoords.first to curCoords.second - 1) to Direction.WEST
+                    Direction.EAST -> (curCoords.first + 1 to curCoords.second) to Direction.SOUTH
+                    else -> error("Incorrect state")
                 }
 
-                SOUTH_WEST -> {
-                    if (i <= size - 2 && this[i + 1][j] in setOf(VERTICAL_PIPE, NORTH_WEST, NORTH_EAST, START)) {
-                        adjacency[(i + 1 to j).flatten(size)].add(current)
-                        adjacency[current].add((i + 1 to j).flatten(size))
-                    }
-                    if (j >= 1 && this[i][j - 1] in setOf(HORIZONTAL_PIPE, NORTH_EAST, SOUTH_EAST, START)) {
-                        adjacency[(i to j - 1).flatten(size)].add(current)
-                        adjacency[current].add((i to j - 1).flatten(size))
-                    }
+                SOUTH_EAST -> when (curDir) {
+                    Direction.NORTH -> (curCoords.first to curCoords.second + 1) to Direction.EAST
+                    Direction.WEST -> (curCoords.first + 1 to curCoords.second) to Direction.SOUTH
+                    else -> error("Incorrect state")
                 }
+
+                else -> error("Incorrect state")
             }
+
+            curCh = lines[nextCoords.first][nextCoords.second]
+            curDir = nextDir
+            curCoords = nextCoords
+            cycle.add(nextCoords.flatten(lines.size))
+        } while (curCh != START)
+
+        return cycle
+    }
+
+    private fun calculateInitialState(): Pair<Char, Direction> {
+        val (i, j) = start
+        val (e1, e2) = linkedMapOf(
+            Direction.NORTH to if (i == 0) GROUND else lines[i - 1][j],
+            Direction.EAST to if (j == size - 1) GROUND else lines[i][j + 1],
+            Direction.SOUTH to if (i == size - 1) GROUND else lines[i + 1][j],
+            Direction.WEST to if (j == 0) GROUND else lines[i][j - 1]
+        )
+            .filter { it.value != GROUND }
+            .entries
+            .toList()
+
+        return when (e1.key to e2.key) {
+            Direction.NORTH to Direction.EAST -> NORTH_EAST to Direction.SOUTH
+            Direction.EAST to Direction.SOUTH -> SOUTH_EAST to Direction.NORTH
+            Direction.SOUTH to Direction.WEST -> SOUTH_WEST to Direction.NORTH
+            Direction.NORTH to Direction.WEST -> NORTH_WEST to Direction.SOUTH
+            Direction.NORTH to Direction.SOUTH -> VERTICAL_PIPE to Direction.NORTH
+            Direction.EAST to Direction.WEST -> HORIZONTAL_PIPE to Direction.EAST
+            else -> error("Incorrect state")
         }
     }
 
-    return Pipes(adjacency, start)
+    fun countEnclosedGrounds(): Int {
+        val cycle = findCycle()
+        val excluded = cycle.toMutableSet()
+
+        for ((i, line) in lines.withIndex()) {
+            val fixedLine = (0..<size).joinToString("") { j ->
+                val cur = (i to j).flatten(size)
+
+                if (cur in cycle) line[j].toString() else GROUND.toString()
+            }
+            var isInside = false
+            var up: Boolean? = null
+
+            for ((j, c) in fixedLine.withIndex()) {
+                when (c) {
+                    VERTICAL_PIPE -> {
+                        isInside = !isInside
+                    }
+
+                    NORTH_EAST, SOUTH_EAST -> {
+                        up = c == NORTH_EAST
+                    }
+
+                    NORTH_WEST, SOUTH_WEST -> {
+                        val expected = if (up != null && up) NORTH_WEST else SOUTH_WEST
+                        if (c != expected) {
+                            isInside = !isInside
+                        }
+                        up = null
+                    }
+                }
+
+                if (!isInside) {
+                    excluded.add((i to j).flatten(size))
+                }
+            }
+        }
+
+        return size * size - excluded.size
+    }
+
+}
+
+private fun List<String>.parsePipes(): Pipes {
+    val start = withIndex()
+        .map { (i, line) -> i to line.indexOf(START) }
+        .first { it.second != -1 }
+        .let { (i, j) -> i to j }
+
+    return Pipes(this, start)
 }
 
 /**
@@ -241,8 +260,8 @@ private fun List<String>.parsePipes(): Pipes {
  * Find the single giant loop starting at S. How many steps along the loop does it take to get from the starting position to the point farthest from the starting position?
  */
 private fun part1(lines: List<String>): Int {
-    val graph = lines.parsePipes()
-    val cycle = graph.findCycle()
+    val pipes = lines.parsePipes()
+    val cycle = pipes.findCycle()
 
     return cycle.size / 2
 }
@@ -341,46 +360,9 @@ private fun part1(lines: List<String>): Int {
  * Figure out whether you have time to search for the nest by calculating the area within the loop. How many tiles are enclosed by the loop?
  */
 private fun part2(lines: List<String>): Int {
-    val graph = lines.parsePipes()
-    val cycle = graph.findCycle()
-    val excluded = cycle.toMutableSet()
-    val size = lines.size
+    val pipes = lines.parsePipes()
 
-    for ((i, line) in lines.withIndex()) {
-        val fixedLine = (0..<size).joinToString("") { j ->
-            val cur = (i to j).flatten(size)
-
-            if (cur in cycle) line[j].toString() else GROUND.toString()
-        }
-        var isInside = false
-        var up: Boolean? = null
-
-        for ((j, c) in fixedLine.withIndex()) {
-            when (c) {
-                VERTICAL_PIPE -> {
-                    isInside = !isInside
-                }
-
-                NORTH_EAST, SOUTH_EAST -> {
-                    up = c == NORTH_EAST
-                }
-
-                NORTH_WEST, SOUTH_WEST -> {
-                    val expected = if (up != null && up) NORTH_WEST else SOUTH_WEST
-                    if (c != expected) {
-                        isInside = !isInside
-                    }
-                    up = null
-                }
-            }
-
-            if (!isInside) {
-                excluded.add((i to j).flatten(size))
-            }
-        }
-    }
-
-    return size * size - excluded.size
+    return pipes.countEnclosedGrounds()
 }
 
 fun main() {
