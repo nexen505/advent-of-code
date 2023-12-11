@@ -1,3 +1,7 @@
+package aoc_2023
+
+import println
+import readInput
 import kotlin.math.abs
 
 private const val STAR = '#'
@@ -156,14 +160,14 @@ private fun part2(lines: List<String>): Long = calculateSumOfLengths(lines, 1000
 
 fun main() {
 
-    val testInput1 = readInput("Day11_test")
-    val input1 = readInput("Day11")
+    val testInput = readInput("aoc_2023/Day11_test")
+    val input = readInput("aoc_2023/Day11")
 
-    check(part1(testInput1) == 374L)
-    part1(input1).println()
+    check(part1(testInput) == 374L)
+    part1(input).println()
 
-    check(calculateSumOfLengths(testInput1, 10) == 1030L)
-    check(calculateSumOfLengths(testInput1, 100) == 8410L)
-    part2(input1).println()
+    check(calculateSumOfLengths(testInput, 10) == 1030L)
+    check(calculateSumOfLengths(testInput, 100) == 8410L)
+    part2(input).println()
 
 }
