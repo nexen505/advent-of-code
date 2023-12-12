@@ -1,3 +1,6 @@
 .gradle
 .idea
 build
+
+# https://adventofcode.com/about#faq_copying
+**/resources/**/*.txt
