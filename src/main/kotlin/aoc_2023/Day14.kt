@@ -1,12 +1,50 @@
 package aoc_2023
 
+import deepCopyOf
 import println
 import readInput
+import rotateRight
+import size2
 import toCharArray2
 
 private const val ROUND = 'O'
-private const val CUBE = '#'
 private const val EMPTY = '.'
+
+private fun Array<CharArray>.tilt(): Array<CharArray> {
+    val tilted = deepCopyOf()
+    val (n, m) = size2()
+
+    for (j in 0..<m) {
+        for (i in 0..<n) {
+            if (tilted[i][j] == ROUND) {
+                var k = i
+                while (k > 0 && tilted[k - 1][j] == EMPTY) {
+                    --k
+                }
+
+                tilted[i][j] = EMPTY
+                tilted[k][j] = ROUND
+            }
+        }
+    }
+
+    return tilted
+}
+
+private fun Array<CharArray>.calculateLoad(): Long {
+    val (n, m) = size2()
+
+    var load = 0L
+    for (j in 0..<m) {
+        for (i in 0..<n) {
+            if (this[j][i] == ROUND) {
+                load += m - j
+            }
+        }
+    }
+
+    return load
+}
 
 /**
  * --- Day 14: Parabolic Reflector Dish ---
@@ -65,32 +103,26 @@ private const val EMPTY = '.'
  * Tilt the platform so that the rounded rocks all roll north. Afterward, what is the total load on the north support beams?
  */
 private fun part1(lines: List<String>): Long {
-    var totalLoad = 0L
-
     val chars = lines.toCharArray2()
-    for (j in chars[0].indices) {
-        var totalColumnLoad = 0L
+    val tilted = chars.tilt()
 
-        var currentLoad = chars.size
-        for (i in chars.indices) {
-            val ch = chars[i][j]
+    return tilted.calculateLoad()
+}
 
-            when (ch) {
-                ROUND -> {
-                    totalColumnLoad += currentLoad
-                    --currentLoad
-                }
+private data class Wrapper(val array: Array<CharArray>) {
 
-                CUBE -> {
-                    currentLoad = chars.size - i - 1
-                }
-            }
-        }
-
-        totalLoad += totalColumnLoad
+    override fun equals(other: Any?): Boolean {
+        return other is Wrapper && array.contentDeepEquals(other.array)
     }
 
-    return totalLoad
+    override fun hashCode(): Int {
+        return array.contentDeepHashCode()
+    }
+
+    override fun toString(): String {
+        return array.joinToString("\n") { it.concatToString() }
+    }
+
 }
 
 /**
@@ -144,8 +176,35 @@ private fun part1(lines: List<String>): Long {
  *
  * Run the spin cycle for 1000000000 cycles. Afterward, what is the total load on the north support beams?
  */
-private fun part2(lines: List<String>): Long {
-    return lines.size.toLong()
+private fun part2(lines: List<String>, cycles: Int = 1000000000): Long {
+    val indexWrappers = mutableMapOf<Int, Wrapper>()
+    val wrapperIndices = mutableMapOf<Wrapper, Int>()
+
+    var state = lines.toCharArray2()
+    var i = 0
+    while (i < cycles) {
+        val wrapper = Wrapper(state)
+
+        val previousIndex = wrapperIndices.put(wrapper, i)
+        if (previousIndex != null) {
+            val cycleSize = i - previousIndex
+            val lastStateIndex = previousIndex + (cycles - previousIndex) % cycleSize
+            val lastState = indexWrappers[lastStateIndex]!!
+
+            state = lastState.array
+
+            break
+        }
+
+        indexWrappers[i] = wrapper
+        repeat(4) {
+            state = state.tilt().rotateRight()
+        }
+
+        ++i
+    }
+
+    return state.calculateLoad()
 }
 
 fun main() {
