@@ -23,10 +23,3 @@ fun String.md5() = BigInteger(1, MessageDigest.getInstance("MD5").digest(toByteA
  * The cleaner shorthand for printing output.
  */
 fun Any?.println() = println(this)
-
-fun Array<CharArray>.transposed(): Array<CharArray> {
-    val rows = this.size
-    val cols = this[0].size
-
-    return Array(cols) { j -> CharArray(rows) { i -> this[i][j] } }
-}
