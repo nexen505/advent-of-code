@@ -11,7 +11,7 @@ private fun parseMap(lines: List<String>): Map<Long, OpenEndRange<Long>> = lines
     }
 
 private fun Map<Long, OpenEndRange<Long>>.getKey(value: Long): Long = this.entries
-    .firstOrNull() { value in it.value }
+    .firstOrNull { value in it.value }
     ?.let { it.key + value - it.value.start }
     ?: value
 
@@ -154,7 +154,7 @@ private fun Map<Long, OpenEndRange<Long>>.map(input: Pair<Long, Long>): Sequence
     val (x1, x2) = input
 
     val intersections = PriorityQueue<Pair<Long, Long>>(Comparator.comparingLong { it.first })
-    for ((dest, range) in this@map) {
+    entries.forEach { (dest, range) ->
         val y1 = maxOf(x1, range.start)
         val y2 = minOf(x2, range.endExclusive - 1)
 
