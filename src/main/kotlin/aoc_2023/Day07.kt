@@ -3,29 +3,32 @@ package aoc_2023
 import println
 import readInput
 
-fun createComparator(cards: List<Char>): Comparator<String> = Comparator { o1, o2 ->
-    val o1num = o1.toList().map { cards.indexOf(it) }
-    val o2num = o2.toList().map { cards.indexOf(it) }
+private class CardsComparator(val cards: List<Char>) : Comparator<String> {
 
-    for ((index, v1) in o1num.withIndex()) {
-        val v2 = o2num[index]
-        val cmp = v1.compareTo(v2)
+    override fun compare(o1: String, o2: String): Int {
+        val o2num = o2.toList().map { cards.indexOf(it) }
 
-        if (cmp != 0) {
-            return@Comparator cmp
-        }
+        return o1.asSequence()
+            .map { cards.indexOf(it) }
+            .withIndex()
+            .map { (index, v1) ->
+                val v2 = o2num[index]
+
+                v1.compareTo(v2)
+            }
+            .firstOrNull { it != 0 }
+            ?: 0
     }
 
-    return@Comparator 0
 }
 
 const val jack = 'J'
-val normalCards = listOf('A', 'K', 'Q', jack, 'T', '9', '8', '7', '6', '5', '4', '3', '2').reversed()
-val normalCardsComparator: Comparator<String> = createComparator(normalCards)
+private val normalCards = listOf('A', 'K', 'Q', jack, 'T', '9', '8', '7', '6', '5', '4', '3', '2').reversed()
+private val normalCardsComparator = CardsComparator(normalCards)
 
 const val joker = jack
-val jokerCards = listOf('A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', joker).reversed()
-val jokerCardsComparator: Comparator<String> = createComparator(jokerCards)
+private val jokerCards = listOf('A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', joker).reversed()
+private val jokerCardsComparator = CardsComparator(jokerCards)
 
 private enum class Type {
     HIGH, PAIR, TWO_PAIR, THREE, FULL_HOUSE, FOUR, FIVE;
@@ -68,10 +71,9 @@ private enum class Type {
 
         fun defineJoking(card: String): Type {
             val chars = card
-                .toList()
+                .asSequence()
                 .groupingBy { it }
-                .eachCount()
-                .toMutableMap()
+                .eachCountTo(mutableMapOf())
             val jokerCount = chars.remove(joker)
             val normalType = defineNormally(chars)
             if (jokerCount == null) {
@@ -106,23 +108,20 @@ private enum class Type {
     }
 }
 
-private fun List<String>.toPairs(typeFn: (String) -> Type): List<Pair<String, Pair<Type, Long>>> = map {
+private fun Sequence<String>.toPairs(typeFn: (String) -> Type): Sequence<Pair<String, Pair<Type, Long>>> = map {
     val (card, bid) = it.split(" ")
     val cardTrimmed = card.trim()
 
     cardTrimmed to (typeFn(cardTrimmed) to bid.trim().toLong())
 }
 
-private fun List<Pair<String, Pair<Type, Long>>>.calculateTotalWinnings(comparator: Comparator<String>): Long {
-    val rankedCards = sortedWith(
+private fun Sequence<Pair<String, Pair<Type, Long>>>.calculateTotalWinnings(comparator: Comparator<String>): Long =
+    sortedWith(
         compareBy<Pair<String, Pair<Type, Long>>> { it.second.first }
             .thenBy(comparator) { it.first }
     )
-
-    return rankedCards
         .withIndex()
         .sumOf { (idx, pair) -> (idx + 1) * pair.second.second }
-}
 
 /**
  * --- Day 7: Camel Cards ---
@@ -182,7 +181,7 @@ private fun List<Pair<String, Pair<Type, Long>>>.calculateTotalWinnings(comparat
  * Find the rank of every hand in your set. What are the total winnings?
  */
 private fun part1(lines: List<String>): Long {
-    val cards = lines.toPairs(Type.Companion::defineNormally)
+    val cards = lines.asSequence().toPairs { Type.defineNormally(it) }
 
     return cards.calculateTotalWinnings(normalCardsComparator)
 }
@@ -213,7 +212,7 @@ private fun part1(lines: List<String>): Long {
  * Using the new joker rule, find the rank of every hand in your set. What are the new total winnings?
  */
 private fun part2(lines: List<String>): Long {
-    val cards = lines.toPairs(Type.Companion::defineJoking)
+    val cards = lines.asSequence().toPairs { Type.defineJoking(it) }
 
     return cards.calculateTotalWinnings(jokerCardsComparator)
 }
