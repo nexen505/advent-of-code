@@ -4,8 +4,10 @@ import println
 import readInput
 
 private const val MOD = 256
+private const val LENS_DELIMITER = ','
+private val LABEL_DELIMITERS = charArrayOf('=', '-')
 
-private fun hash(s: String): Int = s.fold(0) { hash, c -> ((hash + c.code) % MOD) * 17 % MOD }
+private fun hash(s: String): Int = s.fold(0) { hash, c -> (hash + c.code) * 17 % MOD }
 
 /**
  * --- Day 15: Lens Library ---
@@ -79,7 +81,7 @@ private fun hash(s: String): Int = s.fold(0) { hash, c -> ((hash + c.code) % MOD
  *
  */
 private fun part1(line: String): Long = line
-    .splitToSequence(",")
+    .splitToSequence(LENS_DELIMITER)
     .map { hash(it).toLong() }
     .sum()
 
@@ -177,42 +179,27 @@ private fun part1(line: String): Long = line
  * With the help of an over-enthusiastic reindeer in a hard hat, follow the initialization sequence. What is the focusing power of the resulting lens configuration?
  */
 private fun part2(line: String): Long {
-    val map = Array<MutableList<Pair<String, Int>>>(MOD) { ArrayList() }
+    val map = List<LinkedHashMap<String, Long>>(MOD) { LinkedHashMap() }
 
-    for (s in line.splitToSequence(",")) {
-        val idx = s.lastIndexOfAny(charArrayOf('=', '-'))
-
+    for (s in line.splitToSequence(LENS_DELIMITER)) {
+        val idx = s.lastIndexOfAny(LABEL_DELIMITERS)
         val label = s.substring(0, idx)
         val hash = hash(label)
         val bucket = map[hash]
-
         val focalLength = s.substring(idx + 1)
-        if (focalLength.isBlank()) {
-            bucket.removeIf { it.first == label }
-        } else {
-            val labelIdx = bucket.indexOfFirst { it.first == label }
-            val power = focalLength.toInt()
 
-            if (labelIdx >= 0) {
-                bucket.removeAt(labelIdx)
-                bucket.add(labelIdx, label to power)
-            } else {
-                bucket.add(label to power)
-            }
-        }
+        bucket.compute(label) { _, _ -> if (focalLength.isBlank()) null else focalLength.toLong() }
     }
 
-    return map.withIndex().fold(0L) { sumi, vali ->
-        val (i, bucket) = vali
-        val bucketPower = bucket.withIndex().fold(0L) { sumj, valj ->
-            val (j, pair) = valj
-            val (_, power) = pair
-
-            sumj + power.toLong() * (j + 1)
+    return map
+        .withIndex()
+        .sumOf { (i, bucket) ->
+            bucket
+                .values
+                .withIndex()
+                .sumOf { (j, focalLength) -> (j + 1) * focalLength }
+                .let { (i + 1) * it }
         }
-
-        sumi + (i + 1) * bucketPower
-    }
 }
 
 fun main() {
