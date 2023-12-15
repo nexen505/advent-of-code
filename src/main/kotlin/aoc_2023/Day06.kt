@@ -7,39 +7,33 @@ import kotlin.math.floor
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-private fun List<String>.toPairs(): List<Pair<Long, Long>> {
+private fun String.toLongs() = substringAfter(":")
+    .trim()
+    .splitToSequence(" ")
+    .filter { it.isNotBlank() }
+    .map { it.trim().toLong() }
+
+private fun List<String>.toPairs(): Sequence<Pair<Long, Long>> {
     val (time, distance) = this
-    val times = time
-        .substringAfter(":")
-        .trim()
-        .split(" ")
-        .filter { it.isNotBlank() }
-        .map { it.trim().toLong() }
-    val distances = distance
-        .substringAfter(":")
-        .trim()
-        .split(" ")
-        .filter { it.isNotBlank() }
-        .map { it.trim().toLong() }
+    val times = time.toLongs()
+    val distances = distance.toLongs()
 
     return times.zip(distances)
 }
 
-private fun calculateWays(pairs: List<Pair<Long, Long>>): Long {
-    return pairs.fold(1) { res, (time, distance) ->
-        val d = time.toDouble().pow(2) - 4 * distance
-        if (d < 0) {
-            return 1
-        }
-
-        val x1 = (time - sqrt(d)) / 2
-        val min = floor(x1 + 1).toLong()
-        val x2 = (time + sqrt(d)) / 2
-        val max = ceil(x2 - 1).toLong()
-        val ways = max - min + 1
-
-        res * ways
+private fun Sequence<Pair<Long, Long>>.calculateWays(): Long = fold(1) { res, (time, distance) ->
+    val d = time.toDouble().pow(2) - 4 * distance
+    if (d < 0) {
+        return 1
     }
+
+    val x1 = (time - sqrt(d)) / 2
+    val min = floor(x1 + 1).toLong()
+    val x2 = (time + sqrt(d)) / 2
+    val max = ceil(x2 - 1).toLong()
+    val ways = max - min + 1
+
+    res * ways
 }
 
 /**
@@ -93,7 +87,7 @@ private fun calculateWays(pairs: List<Pair<Long, Long>>): Long {
 private fun part1(lines: List<String>): Long {
     val pairs = lines.toPairs()
 
-    return calculateWays(pairs)
+    return pairs.calculateWays()
 }
 
 /**
@@ -119,9 +113,9 @@ private fun part1(lines: List<String>): Long {
 private fun part2(lines: List<String>): Long {
     val timeDistances = lines.toPairs()
     val pair = timeDistances.reduce { (a1, b1), (a2, b2) -> "${a1}${a2}".toLong() to "${b1}${b2}".toLong() }
-    val pairs = listOf(pair)
+    val pairs = sequenceOf(pair)
 
-    return calculateWays(pairs)
+    return pairs.calculateWays()
 }
 
 fun main() {
