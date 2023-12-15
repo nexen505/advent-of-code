@@ -2,24 +2,11 @@ package aoc_2023
 
 import println
 import readInput
+import size2
+import toCharArray2
 
 private const val DELIMITER = '.'
 private const val GEAR = '*'
-
-private fun List<String>.toChar2Array(): Array<CharArray> {
-    val n = this.size
-    val m = this.first().length
-    val chars = Array(n) { CharArray(m) }
-    for (i in 0 until n) {
-        val line = this[i]
-
-        for (j in 0 until m) {
-            chars[i][j] = line[j]
-        }
-    }
-
-    return chars
-}
 
 /**
  * --- Day 3: Gear Ratios ---
@@ -57,13 +44,11 @@ private fun part1(lines: List<String>): Long {
         return 0L
     }
 
+    val chars = lines.toCharArray2()
+    val (n, m) = chars.size2()
+
     var sum = 0L
-
-    val chars = lines.toChar2Array()
-    val n = chars.size
-    val m = chars.first().size
-
-    for (i in 0 until n) {
+    for (i in 0 ..< n) {
         var j = 0
 
         while (j < m) {
@@ -147,13 +132,12 @@ private fun part2(lines: List<String>): Long {
         return 0
     }
 
-    val chars = lines.toChar2Array()
-    val n = chars.size
-    val m = chars.first().size
+    val chars = lines.toCharArray2()
+    val (n, m) = chars.size2()
 
     val gr = Array(n) { LongArray(m) { 1 } }
     val gc = Array(n) { IntArray(m) }
-    for (i in 0 until n) {
+    for (i in 0 ..< n) {
         var j = 0
 
         while (j < m) {
@@ -187,9 +171,9 @@ private fun part2(lines: List<String>): Long {
     }
 
     var sum = 0L
-    for (i in gc.indices) {
-        for (j in gc[i].indices) {
-            if (gc[i][j] == 2) {
+    for ((i, row) in gc.withIndex()) {
+        for (j in row.indices) {
+            if (row[j] == 2) {
                 sum += gr[i][j]
             }
         }
