@@ -3,17 +3,18 @@ package aoc_2023
 import println
 import readInput
 
-private fun calculateWins(card: String): Int {
-    val (win, nums) = card
-        .substringAfter(":")
-        .split("|")
+private fun String.calculateWins(): Int {
+    val (win, nums) = substringAfter(":")
+        .splitToSequence("|")
         .map { it.trim() }
         .map { s ->
-            s.split(" ")
+            s.splitToSequence(" ")
                 .filter { it.isNotBlank() }
                 .map { it.toInt() }
                 .toSet()
         }
+        .take(2)
+        .toList()
 
     return nums.count { win.contains(it) }
 }
@@ -57,11 +58,10 @@ private fun calculateWins(card: String): Int {
  * Take a seat in the large pile of colorful cards. How many points are they worth in total?
  *
  */
-private fun part1(input: List<String>): Long = input.sumOf { card ->
-    val cnt = calculateWins(card)
-
-    if (cnt >= 1) 1L shl (cnt - 1) else 0
-}
+private fun part1(input: List<String>): Long = input
+    .asSequence()
+    .map { it.calculateWins() }
+    .sumOf { if (it >= 1) 1L shl (it - 1) else 0 }
 
 /**
  * --- Day 4: Scratchcards ---
@@ -111,7 +111,7 @@ private fun part2(lines: List<String>): Long {
 
         res += c
 
-        val wins = calculateWins(card)
+        val wins = card.calculateWins()
         for (i in idx + 1..idx + wins) {
             cc[i] += c
         }
