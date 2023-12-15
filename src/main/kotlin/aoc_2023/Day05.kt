@@ -4,11 +4,11 @@ import println
 import readInput
 import java.util.PriorityQueue
 
-private fun parseMap(lines: List<String>): Map<Long, OpenEndRange<Long>> = lines.associate {
-    val (dest, start, step) = it.split(" ")
-
-    dest.toLong() to start.toLong()..<start.toLong() + step.toLong()
-}
+private fun parseMap(lines: List<String>): Map<Long, OpenEndRange<Long>> = lines
+    .map { it.split(' ') }
+    .associate { (dest, start, step) ->
+        dest.toLong() to start.toLong()..<start.toLong() + step.toLong()
+    }
 
 private fun Map<Long, OpenEndRange<Long>>.getKey(value: Long): Long = this.entries
     .firstOrNull() { value in it.value }
@@ -16,7 +16,6 @@ private fun Map<Long, OpenEndRange<Long>>.getKey(value: Long): Long = this.entri
     ?: value
 
 private fun Map<Long, OpenEndRange<Long>>.getKeys(values: Iterable<Long>): List<Long> = values.map { getKey(it) }
-private fun Map<Long, OpenEndRange<Long>>.getKeys(values: Sequence<Long>): Sequence<Long> = values.map { getKey(it) }
 
 private fun parseMaps(lines: List<String>): Sequence<Map<Long, OpenEndRange<Long>>> = sequence {
     var i = 2
@@ -34,6 +33,11 @@ private fun parseMaps(lines: List<String>): Sequence<Map<Long, OpenEndRange<Long
         yield(map)
     } while (++i < lines.size)
 }
+
+private fun List<String>.getSeeds(): List<Long> = first()
+    .substringAfter("seeds: ")
+    .split(" ")
+    .map { it.toLong() }
 
 /**
  * --- Day 5: If You Give A Seed A Fertilizer ---
@@ -139,28 +143,11 @@ private fun parseMaps(lines: List<String>): Sequence<Map<Long, OpenEndRange<Long
  *
  */
 private fun part1(lines: List<String>): Long {
-    val seeds = lines
-        .first()
-        .substringAfter("seeds: ")
-        .split(" ")
-        .map { it.toLong() }
+    val seeds = lines.getSeeds()
     val maps = parseMaps(lines)
     val result = maps.fold(seeds) { values, map -> map.getKeys(values) }
 
     return result.min()
-}
-
-@Suppress("unused")
-private fun part2BruteForce(seeds: List<Long>, maps: Sequence<Map<Long, OpenEndRange<Long>>>): Long {
-    return seeds
-        .asSequence()
-        .chunked(2)
-        .flatMap { (start, step) ->
-            val initial = (start..<start + step).asSequence()
-
-            maps.fold(initial) { values, map -> map.getKeys(values) }
-        }
-        .min()
 }
 
 private fun Map<Long, OpenEndRange<Long>>.map(input: Pair<Long, Long>): Sequence<Pair<Long, Long>> = sequence {
@@ -192,18 +179,6 @@ private fun Map<Long, OpenEndRange<Long>>.map(input: Pair<Long, Long>): Sequence
     }
 }
 
-private fun part2Optimized(seeds: List<Long>, maps: Sequence<Map<Long, OpenEndRange<Long>>>): Long {
-    return seeds
-        .asSequence()
-        .chunked(2)
-        .flatMap { (start, step) ->
-            val initial = sequenceOf(start to start + step - 1)
-
-            maps.fold(initial) { res, map -> res.flatMap { map.map(it) } }
-        }
-        .minOf { it.first }
-}
-
 /**
  * --- Part Two ---
  *
@@ -223,14 +198,18 @@ private fun part2Optimized(seeds: List<Long>, maps: Sequence<Map<Long, OpenEndRa
  *
  */
 private fun part2(lines: List<String>): Long {
-    val seeds = lines
-        .first()
-        .substringAfter("seeds: ")
-        .split(" ")
-        .map { it.toLong() }
-    val maps = parseMaps(lines)
+    val seeds = lines.getSeeds()
+    val maps = parseMaps(lines).toList()
 
-    return part2Optimized(seeds, maps)
+    return seeds
+        .asSequence()
+        .chunked(2)
+        .flatMap { (start, step) ->
+            val initial = sequenceOf(start to start + step - 1)
+
+            maps.fold(initial) { res, map -> res.flatMap { map.map(it) } }
+        }
+        .minOf { it.first }
 }
 
 fun main() {
