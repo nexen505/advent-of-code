@@ -34,37 +34,27 @@ private const val BLUE = "blue"
  *
  * Determine which games would have been possible if the bag had been loaded with only 12 red cubes, 13 green cubes, and 14 blue cubes. What is the sum of the IDs of those games?
  */
-private fun part1(lines: List<String>): Int {
-    var sum = 0
-    var idx = 1
+private fun part1(lines: List<String>): Long = lines.withIndex()
+    .map { (i, s) -> i to s.substringAfter(": ") }
+    .sumOf { (i, setsString) ->
+        val isOk = setsString
+            .splitToSequence("; ")
+            .map { it.split(", ") }
+            .all {
+                it.all { colorString ->
+                    val (quantity, color) = colorString.split(" ")
 
-    for (line in lines) {
-        val (_, setsString) = line.split(": ")
-        val sets = setsString.split("; ")
-        val isOk = sets.all { set ->
-            val colorStrings = set.split(", ")
-
-            colorStrings.all { colorString ->
-                val (quantity, color) = colorString.split(" ")
-
-                when (color) {
-                    RED -> quantity.toInt() <= 12
-                    GREEN -> quantity.toInt() <= 13
-                    BLUE -> quantity.toInt() <= 14
-                    else -> error("Unexpected value: $color")
+                    when (color) {
+                        RED -> quantity.toInt() <= 12
+                        GREEN -> quantity.toInt() <= 13
+                        BLUE -> quantity.toInt() <= 14
+                        else -> error("Unexpected value: $color")
+                    }
                 }
             }
-        }
 
-        if (isOk) {
-            sum += idx
-        }
-
-        ++idx
+        if (isOk) i + 1L else 0L
     }
-
-    return sum
-}
 
 /**
  * --- Part Two ---
@@ -88,38 +78,33 @@ private fun part1(lines: List<String>): Int {
  *
  * For each game, find the minimum set of cubes that must have been present. What is the sum of the power of these sets?
  */
-private fun part2(lines: List<String>): Int = lines.sumOf { line ->
-    val counts = mutableMapOf(
-        RED to 0,
-        GREEN to 0,
-        BLUE to 0
-    )
+private fun part2(lines: List<String>): Long = lines
+    .map { it.split(": ") }
+    .map { (_, setsString) -> setsString }
+    .sumOf { setsString ->
+        val counts = setsString
+            .splitToSequence("; ")
+            .flatMap { it.splitToSequence(", ") }
+            .map { it.split(" ") }
+            .groupingBy { (_, color) -> color }
+            .fold(0L) { v, parts ->
+                val quantity = parts.first().toLong()
 
-    val (_, setsString) = line.split(": ")
-    val sets = setsString.split("; ")
+                maxOf(quantity, v)
+            }
 
-    for (set in sets) {
-        val colorStrings = set.split(", ")
-
-        for (colorString in colorStrings) {
-            val (quantity, color) = colorString.split(" ")
-
-            counts.computeIfPresent(color) { _, v -> maxOf(quantity.toInt(), v) }
-        }
+        if (counts.isEmpty()) 0L else counts.values.fold(1L) { a, b -> a * b }
     }
-
-    if (counts.isEmpty()) 0 else counts.values.fold(1) { a, b -> a * b }.toInt()
-}
 
 fun main() {
 
     val testInput = readInput("aoc_2023/Day02_test")
     val input = readInput("aoc_2023/Day02")
 
-    check(part1(testInput) == 8)
+    check(part1(testInput) == 8L)
     part1(input).println()
 
-    check(part2(testInput) == 2286)
+    check(part2(testInput) == 2286L)
     part2(input).println()
 
 }
