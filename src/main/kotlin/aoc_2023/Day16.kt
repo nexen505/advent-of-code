@@ -5,6 +5,7 @@ import println
 import readInput
 import size2
 import toCharArray2
+import java.util.EnumSet
 import java.util.LinkedList
 
 private const val EMPTY = '.'
@@ -13,179 +14,93 @@ private const val LEFTWARD_MIRROR = '\\'
 private const val HORIZONTAL_SPLITTER = '-'
 private const val VERTICAL_SPLITTER = '|'
 
-private data class Beam(val coords: Pair<Int, Int>, val direction: Direction) {
-}
+private val GO_UP = setOf(
+    Direction.UP to EMPTY,
+    Direction.RIGHT to RIGHTWARD_MIRROR,
+    Direction.LEFT to LEFTWARD_MIRROR,
+    Direction.LEFT to VERTICAL_SPLITTER,
+    Direction.RIGHT to VERTICAL_SPLITTER,
+    Direction.UP to VERTICAL_SPLITTER
+)
+private val GO_DOWN = setOf(
+    Direction.DOWN to EMPTY,
+    Direction.LEFT to RIGHTWARD_MIRROR,
+    Direction.RIGHT to LEFTWARD_MIRROR,
+    Direction.LEFT to VERTICAL_SPLITTER,
+    Direction.RIGHT to VERTICAL_SPLITTER,
+    Direction.DOWN to VERTICAL_SPLITTER
+)
+private val GO_LEFT = setOf(
+    Direction.LEFT to EMPTY,
+    Direction.DOWN to RIGHTWARD_MIRROR,
+    Direction.UP to LEFTWARD_MIRROR,
+    Direction.UP to HORIZONTAL_SPLITTER,
+    Direction.DOWN to HORIZONTAL_SPLITTER,
+    Direction.LEFT to HORIZONTAL_SPLITTER
+)
+private val GO_RIGHT = setOf(
+    Direction.RIGHT to EMPTY,
+    Direction.UP to RIGHTWARD_MIRROR,
+    Direction.DOWN to LEFTWARD_MIRROR,
+    Direction.UP to HORIZONTAL_SPLITTER,
+    Direction.DOWN to HORIZONTAL_SPLITTER,
+    Direction.RIGHT to HORIZONTAL_SPLITTER
+)
+
+private typealias Beam = Triple<Int, Int, Direction>
 
 private fun Array<CharArray>.getNeighbours(pos: Beam): Set<Beam> {
     val neighbours = mutableSetOf<Beam>()
 
     val (n, m) = size2()
-    val (coords, direction) = pos
-    val (i, j) = coords
+    val (i, j, direction) = pos
     val c = this[i][j]
-    when (c) {
-        EMPTY -> {
-            when (direction) {
-                Direction.UP -> {
-                    if (i > 0) {
-                        neighbours += Beam(i - 1 to j, Direction.UP)
-                    }
-                }
 
-                Direction.RIGHT -> {
-                    if (j < m - 1) {
-                        neighbours += Beam(i to j + 1, Direction.RIGHT)
-                    }
-                }
-
-                Direction.DOWN -> {
-                    if (i < n - 1) {
-                        neighbours += Beam(i + 1 to j, Direction.DOWN)
-                    }
-                }
-
-                Direction.LEFT -> {
-                    if (j > 0) {
-                        neighbours += Beam(i to j - 1, Direction.LEFT)
-                    }
-                }
-            }
-        }
-
-        RIGHTWARD_MIRROR -> {
-            when (direction) {
-                Direction.UP -> {
-                    if (j < m - 1) {
-                        neighbours += Beam(i to j + 1, Direction.RIGHT)
-                    }
-                }
-
-                Direction.RIGHT -> {
-                    if (i > 0) {
-                        neighbours += Beam(i - 1 to j, Direction.UP)
-                    }
-                }
-
-                Direction.DOWN -> {
-                    if (j > 0) {
-                        neighbours += Beam(i to j - 1, Direction.LEFT)
-                    }
-                }
-
-                Direction.LEFT -> {
-                    if (i < n - 1) {
-                        neighbours += Beam(i + 1 to j, Direction.DOWN)
-                    }
-                }
-            }
-        }
-
-        LEFTWARD_MIRROR -> {
-            when (direction) {
-                Direction.UP -> {
-                    if (j > 0) {
-                        neighbours += Beam(i to j - 1, Direction.LEFT)
-                    }
-                }
-
-                Direction.RIGHT -> {
-                    if (i < n - 1) {
-                        neighbours += Beam(i + 1 to j, Direction.DOWN)
-                    }
-                }
-
-                Direction.DOWN -> {
-                    if (j < m - 1) {
-                        neighbours += Beam(i to j + 1, Direction.RIGHT)
-                    }
-                }
-
-                Direction.LEFT -> {
-                    if (i > 0) {
-                        neighbours += Beam(i - 1 to j, Direction.UP)
-                    }
-                }
-            }
-        }
-
-        HORIZONTAL_SPLITTER -> {
-            when (direction) {
-                Direction.UP, Direction.DOWN -> {
-                    if (j > 0) {
-                        neighbours += Beam(i to j - 1, Direction.LEFT)
-                    }
-                    if (j < m - 1) {
-                        neighbours += Beam(i to j + 1, Direction.RIGHT)
-                    }
-                }
-
-                Direction.RIGHT -> {
-                    if (j < m - 1) {
-                        neighbours += Beam(i to j + 1, Direction.RIGHT)
-                    }
-                }
-
-                Direction.LEFT -> {
-                    if (j > 0) {
-                        neighbours += Beam(i to j - 1, Direction.LEFT)
-                    }
-                }
-            }
-        }
-
-        VERTICAL_SPLITTER -> {
-            when (direction) {
-                Direction.LEFT, Direction.RIGHT -> {
-                    if (i > 0) {
-                        neighbours += Beam(i - 1 to j, Direction.UP)
-                    }
-                    if (i < n - 1) {
-                        neighbours += Beam(i + 1 to j, Direction.DOWN)
-                    }
-                }
-
-                Direction.UP -> {
-                    if (i > 0) {
-                        neighbours += Beam(i - 1 to j, Direction.UP)
-                    }
-                }
-
-                Direction.DOWN -> {
-                    if (i < n - 1) {
-                        neighbours += Beam(i + 1 to j, Direction.DOWN)
-                    }
-                }
-            }
-        }
+    if (i > 0 && direction to c in GO_UP) {
+        neighbours += Beam(i - 1, j, Direction.UP)
+    }
+    if (i < n - 1 && direction to c in GO_DOWN) {
+        neighbours += Beam(i + 1, j, Direction.DOWN)
+    }
+    if (j > 0 && direction to c in GO_LEFT) {
+        neighbours += Beam(i, j - 1, Direction.LEFT)
+    }
+    if (j < m - 1 && direction to c in GO_RIGHT) {
+        neighbours += Beam(i, j + 1, Direction.RIGHT)
     }
 
     return neighbours
 }
 
 private fun Array<CharArray>.countEnergizedTiles(start: Beam): Long {
-    val visited = mutableSetOf<Beam>()
+    val (n, m) = size2()
+    val visited = Array(n) { Array(m) { EnumSet.noneOf(Direction::class.java) } }
     val stack = LinkedList(listOf(start))
 
     while (stack.isNotEmpty()) {
         val current = stack.removeFirst()
-        if (current !in visited) {
-            visited += current
+        val (i, j, direction) = current
+        val visitedDirections = visited[i][j]
+
+        if (direction !in visitedDirections) {
+            visitedDirections += direction
 
             val neighbours = getNeighbours(current)
             for (neighbour in neighbours) {
-                if (neighbour !in visited) {
-                    stack.add(neighbour)
+                val (ni, nj, ndirection) = neighbour
+
+                if (ndirection !in visited[ni][nj]) {
+                    stack += neighbour
                 }
             }
         }
     }
 
-    return visited
-        .asSequence()
-        .map { it.coords }
-        .distinct()
-        .count()
-        .toLong()
+    return visited.sumOf { row ->
+        val visitedDirections = row.count { it.isNotEmpty() }
+
+        visitedDirections.toLong()
+    }
 }
 
 /**
@@ -250,7 +165,7 @@ private fun Array<CharArray>.countEnergizedTiles(start: Beam): Long {
  */
 private fun part1(lines: List<String>): Long {
     val chars = lines.toCharArray2()
-    val start = Beam(0 to 0, Direction.RIGHT)
+    val start = Beam(0, 0, Direction.RIGHT)
 
     return chars.countEnergizedTiles(start)
 }
@@ -290,12 +205,19 @@ private fun part1(lines: List<String>): Long {
 private fun part2(lines: List<String>): Long {
     val chars = lines.toCharArray2()
     val (n, m) = chars.size2()
-
-    return (0..<n)
+    val candidates = (0..<n)
+        .toList()
         .asSequence()
         .flatMap { i -> (0..<m).asSequence().map { j -> i to j } }
-        .flatMap { pair -> Direction.entries.asSequence().map { direction -> Beam(pair, direction) } }
-        .maxOf { chars.countEnergizedTiles(it) }
+        .flatMap { (i, j) -> Direction.entries.asSequence().map { direction -> Beam(i, j, direction) } }
+        .toList()
+
+    return candidates
+        .stream()
+        .parallel()
+        .mapToLong { chars.countEnergizedTiles(it) }
+        .max()
+        .orElse(0L)
 }
 
 fun main() {
