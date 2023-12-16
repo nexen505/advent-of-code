@@ -1,5 +1,6 @@
 package aoc_2023
 
+import Direction
 import println
 import readInput
 
@@ -11,10 +12,6 @@ private const val SOUTH_WEST = '7'
 private const val SOUTH_EAST = 'F'
 private const val START = 'S'
 private const val GROUND = '.'
-
-private enum class Direction {
-    NORTH, EAST, SOUTH, WEST
-}
 
 private fun Pair<Int, Int>.flatten(size: Int): Int = first * size + second
 
@@ -31,38 +28,38 @@ private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
         do {
             val (nextCoords, nextDir) = when (curCh) {
                 VERTICAL_PIPE -> when (curDir) {
-                    Direction.NORTH -> (curCoords.first - 1 to curCoords.second) to curDir
-                    Direction.SOUTH -> (curCoords.first + 1 to curCoords.second) to curDir
+                    Direction.UP -> (curCoords.first - 1 to curCoords.second) to curDir
+                    Direction.DOWN -> (curCoords.first + 1 to curCoords.second) to curDir
                     else -> error("Incorrect state")
                 }
 
                 HORIZONTAL_PIPE -> when (curDir) {
-                    Direction.WEST -> (curCoords.first to curCoords.second - 1) to curDir
-                    Direction.EAST -> (curCoords.first to curCoords.second + 1) to curDir
+                    Direction.LEFT -> (curCoords.first to curCoords.second - 1) to curDir
+                    Direction.RIGHT -> (curCoords.first to curCoords.second + 1) to curDir
                     else -> error("Incorrect state")
                 }
 
                 NORTH_WEST -> when (curDir) {
-                    Direction.SOUTH -> (curCoords.first to curCoords.second - 1) to Direction.WEST
-                    Direction.EAST -> (curCoords.first - 1 to curCoords.second) to Direction.NORTH
+                    Direction.DOWN -> (curCoords.first to curCoords.second - 1) to Direction.LEFT
+                    Direction.RIGHT -> (curCoords.first - 1 to curCoords.second) to Direction.UP
                     else -> error("Incorrect state")
                 }
 
                 NORTH_EAST -> when (curDir) {
-                    Direction.SOUTH -> (curCoords.first to curCoords.second + 1) to Direction.EAST
-                    Direction.WEST -> (curCoords.first - 1 to curCoords.second) to Direction.NORTH
+                    Direction.DOWN -> (curCoords.first to curCoords.second + 1) to Direction.RIGHT
+                    Direction.LEFT -> (curCoords.first - 1 to curCoords.second) to Direction.UP
                     else -> error("Incorrect state")
                 }
 
                 SOUTH_WEST -> when (curDir) {
-                    Direction.NORTH -> (curCoords.first to curCoords.second - 1) to Direction.WEST
-                    Direction.EAST -> (curCoords.first + 1 to curCoords.second) to Direction.SOUTH
+                    Direction.UP -> (curCoords.first to curCoords.second - 1) to Direction.LEFT
+                    Direction.RIGHT -> (curCoords.first + 1 to curCoords.second) to Direction.DOWN
                     else -> error("Incorrect state")
                 }
 
                 SOUTH_EAST -> when (curDir) {
-                    Direction.NORTH -> (curCoords.first to curCoords.second + 1) to Direction.EAST
-                    Direction.WEST -> (curCoords.first + 1 to curCoords.second) to Direction.SOUTH
+                    Direction.UP -> (curCoords.first to curCoords.second + 1) to Direction.RIGHT
+                    Direction.LEFT -> (curCoords.first + 1 to curCoords.second) to Direction.DOWN
                     else -> error("Incorrect state")
                 }
 
@@ -81,22 +78,22 @@ private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
     private fun calculateInitialState(): Pair<Char, Direction> {
         val (i, j) = start
         val (e1, e2) = linkedMapOf(
-            Direction.NORTH to if (i == 0) GROUND else lines[i - 1][j],
-            Direction.EAST to if (j == size - 1) GROUND else lines[i][j + 1],
-            Direction.SOUTH to if (i == size - 1) GROUND else lines[i + 1][j],
-            Direction.WEST to if (j == 0) GROUND else lines[i][j - 1]
+            Direction.UP to if (i == 0) GROUND else lines[i - 1][j],
+            Direction.RIGHT to if (j == size - 1) GROUND else lines[i][j + 1],
+            Direction.DOWN to if (i == size - 1) GROUND else lines[i + 1][j],
+            Direction.LEFT to if (j == 0) GROUND else lines[i][j - 1]
         )
             .filter { it.value != GROUND }
             .entries
             .toList()
 
         return when (e1.key to e2.key) {
-            Direction.NORTH to Direction.EAST -> NORTH_EAST to Direction.SOUTH
-            Direction.EAST to Direction.SOUTH -> SOUTH_EAST to Direction.NORTH
-            Direction.SOUTH to Direction.WEST -> SOUTH_WEST to Direction.NORTH
-            Direction.NORTH to Direction.WEST -> NORTH_WEST to Direction.SOUTH
-            Direction.NORTH to Direction.SOUTH -> VERTICAL_PIPE to Direction.NORTH
-            Direction.EAST to Direction.WEST -> HORIZONTAL_PIPE to Direction.EAST
+            Direction.UP to Direction.RIGHT -> NORTH_EAST to Direction.DOWN
+            Direction.RIGHT to Direction.DOWN -> SOUTH_EAST to Direction.UP
+            Direction.DOWN to Direction.LEFT -> SOUTH_WEST to Direction.UP
+            Direction.UP to Direction.LEFT -> NORTH_WEST to Direction.DOWN
+            Direction.UP to Direction.DOWN -> VERTICAL_PIPE to Direction.UP
+            Direction.RIGHT to Direction.LEFT -> HORIZONTAL_PIPE to Direction.RIGHT
             else -> error("Incorrect state")
         }
     }
