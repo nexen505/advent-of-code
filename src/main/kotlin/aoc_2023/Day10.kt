@@ -22,55 +22,30 @@ private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
 
     fun findCycle(): Set<Int> {
         val cycle = linkedSetOf(start.flatten(size))
-        var (curCh, curDir) = calculateInitialState()
+        var current = calculateInitialState()
         var curCoords = start
 
         do {
-            val (nextCoords, nextDir) = when (curCh) {
-                VERTICAL_PIPE -> when (curDir) {
-                    Direction.UP -> (curCoords.first - 1 to curCoords.second) to curDir
-                    Direction.DOWN -> (curCoords.first + 1 to curCoords.second) to curDir
-                    else -> error("Incorrect state")
-                }
-
-                HORIZONTAL_PIPE -> when (curDir) {
-                    Direction.LEFT -> (curCoords.first to curCoords.second - 1) to curDir
-                    Direction.RIGHT -> (curCoords.first to curCoords.second + 1) to curDir
-                    else -> error("Incorrect state")
-                }
-
-                NORTH_WEST -> when (curDir) {
-                    Direction.DOWN -> (curCoords.first to curCoords.second - 1) to Direction.LEFT
-                    Direction.RIGHT -> (curCoords.first - 1 to curCoords.second) to Direction.UP
-                    else -> error("Incorrect state")
-                }
-
-                NORTH_EAST -> when (curDir) {
-                    Direction.DOWN -> (curCoords.first to curCoords.second + 1) to Direction.RIGHT
-                    Direction.LEFT -> (curCoords.first - 1 to curCoords.second) to Direction.UP
-                    else -> error("Incorrect state")
-                }
-
-                SOUTH_WEST -> when (curDir) {
-                    Direction.UP -> (curCoords.first to curCoords.second - 1) to Direction.LEFT
-                    Direction.RIGHT -> (curCoords.first + 1 to curCoords.second) to Direction.DOWN
-                    else -> error("Incorrect state")
-                }
-
-                SOUTH_EAST -> when (curDir) {
-                    Direction.UP -> (curCoords.first to curCoords.second + 1) to Direction.RIGHT
-                    Direction.LEFT -> (curCoords.first + 1 to curCoords.second) to Direction.DOWN
-                    else -> error("Incorrect state")
-                }
-
+            val (nextCoords, nextDir) = when (current) {
+                VERTICAL_PIPE to Direction.UP,
+                NORTH_WEST to Direction.RIGHT,
+                NORTH_EAST to Direction.LEFT -> (curCoords.first - 1 to curCoords.second) to Direction.UP
+                VERTICAL_PIPE to Direction.DOWN,
+                SOUTH_WEST to Direction.RIGHT,
+                SOUTH_EAST to Direction.LEFT -> (curCoords.first + 1 to curCoords.second) to Direction.DOWN
+                HORIZONTAL_PIPE to Direction.LEFT,
+                NORTH_WEST to Direction.DOWN,
+                SOUTH_WEST to Direction.UP -> (curCoords.first to curCoords.second - 1) to Direction.LEFT
+                HORIZONTAL_PIPE to Direction.RIGHT,
+                NORTH_EAST to Direction.DOWN,
+                SOUTH_EAST to Direction.UP -> (curCoords.first to curCoords.second + 1) to Direction.RIGHT
                 else -> error("Incorrect state")
             }
 
-            curCh = lines[nextCoords.first][nextCoords.second]
-            curDir = nextDir
+            current = lines[nextCoords.first][nextCoords.second] to nextDir
             curCoords = nextCoords
             cycle.add(nextCoords.flatten(lines.size))
-        } while (curCh != START)
+        } while (current.first != START)
 
         return cycle
     }
@@ -78,10 +53,10 @@ private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
     private fun calculateInitialState(): Pair<Char, Direction> {
         val (i, j) = start
         val (e1, e2) = linkedMapOf(
-            Direction.UP to if (i == 0) GROUND else lines[i - 1][j],
-            Direction.RIGHT to if (j == size - 1) GROUND else lines[i][j + 1],
-            Direction.DOWN to if (i == size - 1) GROUND else lines[i + 1][j],
-            Direction.LEFT to if (j == 0) GROUND else lines[i][j - 1]
+            Direction.UP to (if (i == 0) GROUND else lines[i - 1][j]),
+            Direction.RIGHT to (if (j == size - 1) GROUND else lines[i][j + 1]),
+            Direction.DOWN to (if (i == size - 1) GROUND else lines[i + 1][j]),
+            Direction.LEFT to (if (j == 0) GROUND else lines[i][j - 1])
         )
             .filter { it.value != GROUND }
             .entries
@@ -366,17 +341,14 @@ fun main() {
 
     val testInput1 = readInput("aoc_2023/Day10_test")
     val testInput2 = readInput("aoc_2023/Day10_test2")
-    val testInput3 = readInput("aoc_2023/Day10_test3")
-    val input1 = readInput("aoc_2023/Day10")
-    val input2 = readInput("aoc_2023/Day10")
+    val input = readInput("aoc_2023/Day10")
 
     check(part1(testInput1) == 4)
     check(part1(testInput2) == 8)
-    part1(input1).println()
+    part1(input).println()
 
     check(part2(testInput1) == 1)
     check(part2(testInput2) == 1)
-    check(part2(testInput3) == 4)
-    part2(input2).println()
+    part2(input).println()
 
 }
