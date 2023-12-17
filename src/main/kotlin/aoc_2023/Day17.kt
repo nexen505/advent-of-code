@@ -3,7 +3,7 @@ package aoc_2023
 import println
 import readInput
 import toCharArray2
-import java.util.LinkedList
+import java.util.PriorityQueue
 
 private fun List<String>.toIntArray2() = toCharArray2().map { row ->
     row.map { it.digitToInt() }.toIntArray()
@@ -17,49 +17,50 @@ private fun calculateLeastHeatLoss(heatMap: List<IntArray>, minSteps: Int, maxSt
 
     val directions = listOf(0 to 1, 1 to 0, 0 to -1, -1 to 0)
     val dp = Array(n) { Array(m) { Array(directions.size) { LongArray(maxSteps + 1) { Long.MAX_VALUE } } } }
-    dp[0][0][0][0] = 0
-    dp[0][0][1][0] = 0
-    dp[0][0][2][0] = 0
-    dp[0][0][3][0] = 0
+    for (i in directions.indices) {
+        dp[0][0][i][0] = 0
+    }
 
-    val queue = LinkedList<State>()
+    val queue = PriorityQueue<State>(compareBy { it.cost })
     queue.add(State(0, 0, -1, 0, 0))
 
     while (queue.isNotEmpty()) {
-        val (i, j, prevDir, steps, cost) = queue.removeFirst()
-        if (i == n - 1 && j == m - 1) {
-            continue
+        val (i, j, prevDir, steps, cost) = queue.remove()
+        if (i == n - 1 && j == m - 1 && steps >= minSteps) {
+            return cost
         }
 
-        for ((newDir, direction) in directions.withIndex()) {
-            if (prevDir != -1 && ((prevDir - newDir + directions.size) % directions.size == 2)) {
+        for ((nextDir, direction) in directions.withIndex()) {
+            // skip if trying to move back to the same direction where we were coming from
+            if (prevDir != -1 && (nextDir + directions.size / 2) % directions.size == prevDir) {
                 continue
             }
 
-            val (di, dj) = direction
             for (k in 1..maxSteps) {
-                val newi = i + di * k
-                val newj = j + dj * k
-                if (newi in 0..<n && newj in 0..<m) {
-                    val isSameDirection = prevDir == -1 || prevDir == newDir
-                    val newSteps = k + if (isSameDirection) steps else 0
+                val (di, dj) = direction
+                val nextI = i + di * k
+                val nextJ = j + dj * k
+                if (nextI !in 0..<n || nextJ !in 0..<m) {
+                    break
+                }
 
-                    if (newSteps in minSteps..maxSteps) {
-                        val additionalCost = (1..k).sumOf { heatMap[i + di * it][j + dj * it] }
-                        val newCost = cost + additionalCost
+                val isSameDirection = prevDir == -1 || prevDir == nextDir
+                val nextSteps = k + if (isSameDirection) steps else 0
 
-                        if (dp[newi][newj][newDir][newSteps] > newCost) {
-                            dp[newi][newj][newDir][newSteps] = newCost
+                if (nextSteps in minSteps..maxSteps) {
+                    val additionalCost = (1..k).sumOf { heatMap[i + di * it][j + dj * it].toLong() }
+                    val nextCost = cost + additionalCost
 
-                            queue.add(State(newi, newj, newDir, newSteps, newCost))
-                        }
+                    if (dp[nextI][nextJ][nextDir][nextSteps] > nextCost) {
+                        dp[nextI][nextJ][nextDir][nextSteps] = nextCost
+                        queue.add(State(nextI, nextJ, nextDir, nextSteps, nextCost))
                     }
                 }
             }
         }
     }
 
-    return dp.last().last().minOf { it.min() }
+    return Long.MAX_VALUE
 }
 
 private fun part1(lines: List<String>): Long {
