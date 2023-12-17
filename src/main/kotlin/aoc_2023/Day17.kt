@@ -5,17 +5,18 @@ import readInput
 import toCharArray2
 import java.util.LinkedList
 
-private data class State(val i: Int, val j: Int, val dir: Int, val steps: Int, val cost: Long = 0L)
-
 private fun List<String>.toIntArray2() = toCharArray2().map { row ->
     row.map { it.digitToInt() }.toIntArray()
 }
 
-private fun findLeastHeatLoss(heatMap: List<IntArray>, minSteps: Int = 1, maxSteps: Int = 3): Long {
+private data class State(val i: Int, val j: Int, val dir: Int, val steps: Int, val cost: Long = 0L)
+
+private fun calculateLeastHeatLoss(heatMap: List<IntArray>, minSteps: Int, maxSteps: Int): Long {
     val n = heatMap.size
     val m = heatMap.first().size
-    val dp = List(n) { List(m) { List(4) { MutableList(maxSteps + 1) { Long.MAX_VALUE } } } }
 
+    val directions = listOf(0 to 1, 1 to 0, 0 to -1, -1 to 0)
+    val dp = Array(n) { Array(m) { Array(directions.size) { LongArray(maxSteps + 1) { Long.MAX_VALUE } } } }
     dp[0][0][0][0] = 0
     dp[0][0][1][0] = 0
     dp[0][0][2][0] = 0
@@ -24,53 +25,56 @@ private fun findLeastHeatLoss(heatMap: List<IntArray>, minSteps: Int = 1, maxSte
     val queue = LinkedList<State>()
     queue.add(State(0, 0, -1, 0, 0))
 
-    val directions = listOf(0 to 1, 1 to 0, 0 to -1, -1 to 0)
-
     while (queue.isNotEmpty()) {
-        val currentState = queue.removeFirst()
-        if (currentState.i == n - 1 && currentState.j == m - 1) {
+        val (i, j, prevDir, steps, cost) = queue.removeFirst()
+        if (i == n - 1 && j == m - 1) {
             continue
         }
 
-        for ((diri, direction) in directions.withIndex()) {
-            if (currentState.dir != -1 && ((currentState.dir - diri + directions.size) % directions.size == 2)) {
+        for ((newDir, direction) in directions.withIndex()) {
+            if (prevDir != -1 && ((prevDir - newDir + directions.size) % directions.size == 2)) {
                 continue
             }
 
-            val (dRow, dCol) = direction
-            val newi = currentState.i + dRow
-            val newj = currentState.j + dCol
-            val newSteps = if (currentState.dir == -1 || currentState.dir == diri) currentState.steps + 1 else 1
-            val additionalCost = if (newi in 0..<n && newj in 0..<m) heatMap[newi][newj] else 0
+            val (di, dj) = direction
+            for (k in 1..maxSteps) {
+                val newi = i + di * k
+                val newj = j + dj * k
+                if (newi in 0..<n && newj in 0..<m) {
+                    val isSameDirection = prevDir == -1 || prevDir == newDir
+                    val newSteps = k + if (isSameDirection) steps else 0
 
-            if (newi in 0..<n && newj in 0..<m && newSteps in minSteps..maxSteps) {
-                val newCost = currentState.cost + additionalCost
+                    if (newSteps in minSteps..maxSteps) {
+                        val additionalCost = (1..k).sumOf { heatMap[i + di * it][j + dj * it] }
+                        val newCost = cost + additionalCost
 
-                if (dp[newi][newj][diri][newSteps] > newCost) {
-                    dp[newi][newj][diri][newSteps] = newCost
+                        if (dp[newi][newj][newDir][newSteps] > newCost) {
+                            dp[newi][newj][newDir][newSteps] = newCost
 
-                    queue.add(State(newi, newj, diri, newSteps, newCost))
+                            queue.add(State(newi, newj, newDir, newSteps, newCost))
+                        }
+                    }
                 }
             }
         }
     }
 
-    return dp[n - 1][m - 1].flatten().min()
+    return dp.last().last().minOf { it.min() }
 }
 
 private fun part1(lines: List<String>): Long {
     val map = lines.toIntArray2()
-    val findLeastHeatLoss = findLeastHeatLoss(map, 1, 3)
+    val loss = calculateLeastHeatLoss(map, 1, 3)
 
-    return findLeastHeatLoss
+    return loss
 }
 
 
 private fun part2(lines: List<String>): Long {
     val map = lines.toIntArray2()
-    val findLeastHeatLoss = findLeastHeatLoss(map, 4, 10)
+    val loss = calculateLeastHeatLoss(map, 4, 10)
 
-    return findLeastHeatLoss
+    return loss
 }
 
 fun main() {
