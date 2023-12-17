@@ -2,23 +2,24 @@ package aoc_2023
 
 import println
 import readInput
+import java.util.LinkedList
 
 private fun List<String>.toSequences(): Sequence<List<Long>> = asSequence()
     .map { it.split(" ") }
     .map { it.map { v -> v.toLong() } }
 
-private fun List<Long>.extrapolate(): Long {
-    var sum = last()
-
-    var current = this
+private fun List<Long>.collapse(): Sequence<List<Long>> = sequence {
+    var current = this@collapse
     do {
         current = current.windowed(2) { (a, b) -> b - a }
 
-        sum += current.last()
+        yield(current)
     } while (current.any { it != 0L })
-
-    return sum
 }
+
+private fun List<Long>.extrapolate(): Long = collapse()
+    .map { it.last() }
+    .fold(last()) { sum, v -> sum + v }
 
 /**
  * --- Day 9: Mirage Maintenance ---
@@ -91,16 +92,13 @@ private fun part1(lines: List<String>): Long = lines
     .sumOf { it.extrapolate() }
 
 private fun List<Long>.extrapolateBackwards(): Long {
-    val values = mutableListOf(first())
+    val values = LinkedList(listOf(first()))
 
-    var current = this
-    do {
-        current = current.windowed(2) { (a, b) -> b - a }
+    collapse()
+        .map { it.first() }
+        .forEach { values.addFirst(it) }
 
-        values.add(current.first())
-    } while (current.any { it != 0L })
-
-    return values.reversed().fold(0L) { res, v -> v - res }
+    return values.fold(0L) { res, v -> v - res }
 }
 
 /**
@@ -128,15 +126,13 @@ private fun part2(lines: List<String>): Long = lines
 
 fun main() {
 
-    val testInput1 = readInput("aoc_2023/Day09_test")
-    val testInput2 = readInput("aoc_2023/Day09_test")
-    val input1 = readInput("aoc_2023/Day09")
-    val input2 = readInput("aoc_2023/Day09")
+    val testInput = readInput("aoc_2023/Day09_test")
+    val input = readInput("aoc_2023/Day09")
 
-    check(part1(testInput1) == 114L)
-    part1(input1).println()
+    check(part1(testInput) == 114L)
+    part1(input).println()
 
-    check(part2(testInput2) == 2L)
-    part2(input2).println()
+    check(part2(testInput) == 2L)
+    part2(input).println()
 
 }
