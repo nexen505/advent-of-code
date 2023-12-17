@@ -25,9 +25,9 @@ private fun calculateLeastHeatLoss(heatMap: List<IntArray>, minSteps: Int, maxSt
     queue.add(State(0, 0, -1, 0, 0))
 
     while (queue.isNotEmpty()) {
-        val (i, j, prevDir, steps, cost) = queue.remove()
-        if (i == n - 1 && j == m - 1 && steps >= minSteps) {
-            return cost
+        val (i, j, prevDir, prevSteps, prevCost) = queue.remove()
+        if (i == n - 1 && j == m - 1 && prevSteps >= minSteps) {
+            return prevCost
         }
 
         for ((nextDir, direction) in directions.withIndex()) {
@@ -36,26 +36,34 @@ private fun calculateLeastHeatLoss(heatMap: List<IntArray>, minSteps: Int, maxSt
                 continue
             }
 
-            for (k in 1..maxSteps) {
-                val (di, dj) = direction
-                val nextI = i + di * k
-                val nextJ = j + dj * k
+            val (di, dj) = direction
+            val isSameDirection = prevDir == -1 || prevDir == nextDir
+            val currentSteps = if (isSameDirection) prevSteps else 0
+
+            var nextI = i
+            var nextJ = j
+            var additionalSteps = 1
+            var additionalCost = 0L
+            while (additionalSteps <= maxSteps) {
+                nextI += di
+                nextJ += dj
                 if (nextI !in 0..<n || nextJ !in 0..<m) {
                     break
                 }
 
-                val isSameDirection = prevDir == -1 || prevDir == nextDir
-                val nextSteps = k + if (isSameDirection) steps else 0
+                additionalCost += heatMap[nextI][nextJ]
 
+                val nextSteps = currentSteps + additionalSteps
                 if (nextSteps in minSteps..maxSteps) {
-                    val additionalCost = (1..k).sumOf { heatMap[i + di * it][j + dj * it].toLong() }
-                    val nextCost = cost + additionalCost
+                    val nextCost = prevCost + additionalCost
 
                     if (dp[nextI][nextJ][nextDir][nextSteps] > nextCost) {
                         dp[nextI][nextJ][nextDir][nextSteps] = nextCost
                         queue.add(State(nextI, nextJ, nextDir, nextSteps, nextCost))
                     }
                 }
+
+                ++additionalSteps
             }
         }
     }
