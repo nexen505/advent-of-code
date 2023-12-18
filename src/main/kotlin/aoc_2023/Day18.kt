@@ -3,8 +3,7 @@ package aoc_2023
 import Direction
 import println
 import readInput
-import kotlin.math.pow
-import kotlin.math.sqrt
+import kotlin.math.hypot
 
 private data class Instruction(val direction: Direction, val steps: Long, val color: String)
 
@@ -47,7 +46,7 @@ private fun Iterable<Pair<Long, Long>>.calculateArea(): Long {
         // trapezoid formula https://en.wikipedia.org/wiki/Shoelace_formula
         area += (prev.second + cur.second) * (prev.first - cur.first) / 2
 
-        border += sqrt((cur.first.toDouble() - prev.first).pow(2.0) + (cur.second.toDouble() - prev.second).pow(2.0)).toLong()
+        border += hypot(cur.first.toDouble() - prev.first, cur.second.toDouble() - prev.second).toLong()
     }
 
     // https://en.wikipedia.org/wiki/Pick%27s_theorem
