@@ -1,9 +1,11 @@
 package aoc_2023
 
 import Direction
+import calculateArea
+import calculateLength
 import println
 import readInput
-import kotlin.math.hypot
+import java.util.SequencedSet
 
 private data class Instruction(val direction: Direction, val steps: Long, val color: String)
 
@@ -19,7 +21,7 @@ private fun String.parse(): Instruction {
 }
 
 private fun Iterable<Instruction>.calculateAreaBySteps(): Long {
-    val border = mutableListOf<Pair<Long, Long>>()
+    val border = linkedSetOf<Pair<Long, Long>>()
 
     var pair = 0L to 0L
     for ((direction, steps) in this) {
@@ -28,7 +30,7 @@ private fun Iterable<Instruction>.calculateAreaBySteps(): Long {
         border += pair
     }
 
-    return border.asReversed().calculateArea()
+    return border.calculateEnclosedArea()
 }
 
 private fun Pair<Long, Long>.getNextPair(direction: Direction, steps: Long) = when (direction) {
@@ -38,19 +40,12 @@ private fun Pair<Long, Long>.getNextPair(direction: Direction, steps: Long) = wh
     Direction.RIGHT -> first to second + steps
 }
 
-private fun Iterable<Pair<Long, Long>>.calculateArea(): Long {
-    var area = 0L
-    var border = 0L
-    val pairs = windowed(2) + listOf(listOf(last(), first()))
-    for ((prev, cur) in pairs) {
-        // trapezoid formula https://en.wikipedia.org/wiki/Shoelace_formula
-        area += (prev.second + cur.second) * (prev.first - cur.first) / 2
+private fun SequencedSet<Pair<Long, Long>>.calculateEnclosedArea(): Long {
+    val area = reversed().calculateArea()
+    val length = calculateLength()
 
-        border += hypot(cur.first.toDouble() - prev.first, cur.second.toDouble() - prev.second).toLong()
-    }
-
-    // https://en.wikipedia.org/wiki/Pick%27s_theorem
-    return area + border / 2 + 1
+    // kinda https://en.wikipedia.org/wiki/Pick%27s_theorem
+    return area + length / 2 + 1
 }
 
 /**
@@ -116,7 +111,7 @@ private fun part1(lines: List<String>): Long {
 }
 
 private fun Iterable<Instruction>.calculateAreaByColors(): Long {
-    val border = mutableListOf<Pair<Long, Long>>()
+    val border = linkedSetOf<Pair<Long, Long>>()
 
     var pair = 0L to 0L
     for ((_, _, color) in this) {
@@ -135,7 +130,7 @@ private fun Iterable<Instruction>.calculateAreaByColors(): Long {
         border += pair
     }
 
-    return border.asReversed().calculateArea()
+    return border.calculateEnclosedArea()
 }
 
 /**

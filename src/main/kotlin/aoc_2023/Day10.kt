@@ -1,8 +1,10 @@
 package aoc_2023
 
 import Direction
+import calculateArea
 import println
 import readInput
+import java.util.SequencedSet
 
 private const val VERTICAL_PIPE = '|'
 private const val HORIZONTAL_PIPE = '-'
@@ -13,15 +15,13 @@ private const val SOUTH_EAST = 'F'
 private const val START = 'S'
 private const val GROUND = '.'
 
-private fun Pair<Int, Int>.flatten(size: Int): Int = first * size + second
-
 private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
 
     private val size: Int
         get() = lines.size
 
-    fun findCycle(): Set<Int> {
-        val cycle = linkedSetOf(start.flatten(size))
+    fun findCycle(): SequencedSet<Pair<Int, Int>> {
+        val cycle = linkedSetOf(start)
         var current = calculateInitialState()
         var curCoords = start
 
@@ -44,7 +44,7 @@ private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
 
             current = lines[nextCoords.first][nextCoords.second] to nextDir
             curCoords = nextCoords
-            cycle.add(nextCoords.flatten(lines.size))
+            cycle.add(nextCoords)
         } while (current.first != START)
 
         return cycle
@@ -73,45 +73,14 @@ private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
         }
     }
 
-    fun countEnclosedGrounds(): Int {
+    fun countEnclosedGrounds(): Long {
         val cycle = findCycle()
-        val excluded = cycle.toMutableSet()
+            .map { it.first.toLong() to it.second.toLong() }
+            .asReversed()
+        val area = cycle.calculateArea()
 
-        for ((i, line) in lines.withIndex()) {
-            val fixedLine = (0..<size).joinToString("") { j ->
-                val cur = (i to j).flatten(size)
-
-                if (cur in cycle) line[j].toString() else GROUND.toString()
-            }
-            var isInside = false
-            var up: Boolean? = null
-
-            for ((j, c) in fixedLine.withIndex()) {
-                when (c) {
-                    VERTICAL_PIPE -> {
-                        isInside = !isInside
-                    }
-
-                    NORTH_EAST, SOUTH_EAST -> {
-                        up = c == NORTH_EAST
-                    }
-
-                    NORTH_WEST, SOUTH_WEST -> {
-                        val expected = if (up != null && up) NORTH_WEST else SOUTH_WEST
-                        if (c != expected) {
-                            isInside = !isInside
-                        }
-                        up = null
-                    }
-                }
-
-                if (!isInside) {
-                    excluded.add((i to j).flatten(size))
-                }
-            }
-        }
-
-        return size * size - excluded.size
+        // https://en.wikipedia.org/wiki/Pick%27s_theorem
+        return area - cycle.size / 2 + 1
     }
 
 }
@@ -331,7 +300,7 @@ private fun part1(lines: List<String>): Int {
  *
  * Figure out whether you have time to search for the nest by calculating the area within the loop. How many tiles are enclosed by the loop?
  */
-private fun part2(lines: List<String>): Int {
+private fun part2(lines: List<String>): Long {
     val pipes = lines.parsePipes()
 
     return pipes.countEnclosedGrounds()
@@ -347,8 +316,8 @@ fun main() {
     check(part1(testInput2) == 8)
     part1(input).println()
 
-    check(part2(testInput1) == 1)
-    check(part2(testInput2) == 1)
+    check(part2(testInput1) == 1L)
+    check(part2(testInput2) == 1L)
     part2(input).println()
 
 }
