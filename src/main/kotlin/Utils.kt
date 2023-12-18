@@ -25,5 +25,15 @@ fun String.md5() = BigInteger(1, MessageDigest.getInstance("MD5").digest(toByteA
 fun Any?.println() = println(this)
 
 enum class Direction {
-    UP, RIGHT, DOWN, LEFT
+    UP, RIGHT, DOWN, LEFT;
+
+    companion object {
+        fun parse(c: Char): Direction = when (c) {
+            'U' -> UP
+            'R' -> RIGHT
+            'D' -> DOWN
+            'L' -> LEFT
+            else -> error("Unknown direction $c")
+        }
+    }
 }

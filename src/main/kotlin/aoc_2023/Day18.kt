@@ -1,0 +1,189 @@
+package aoc_2023
+
+import Direction
+import println
+import readInput
+import kotlin.math.pow
+import kotlin.math.sqrt
+
+private data class Instruction(val direction: Direction, val steps: Long, val color: String)
+
+private fun Iterable<String>.parse(): Iterable<Instruction> = map(String::parse)
+
+private fun String.parse(): Instruction {
+    val (d, s, c) = trim().split(" ")
+    val direction = Direction.parse(d.single())
+    val steps = s.toLong()
+    val color = c.trim('(', ')')
+
+    return Instruction(direction, steps, color)
+}
+
+private fun Iterable<Instruction>.calculateAreaBySteps(): Long {
+    val border = mutableListOf<Pair<Long, Long>>()
+
+    var pair = 0L to 0L
+    for ((direction, steps) in this) {
+        pair = pair.getNextPair(direction, steps)
+
+        border += pair
+    }
+
+    return border.asReversed().calculateArea()
+}
+
+private fun Pair<Long, Long>.getNextPair(direction: Direction, steps: Long) = when (direction) {
+    Direction.UP -> first - steps to second
+    Direction.DOWN -> first + steps to second
+    Direction.LEFT -> first to second - steps
+    Direction.RIGHT -> first to second + steps
+    else -> error("Unknown direction $direction")
+}
+
+private fun Iterable<Pair<Long, Long>>.calculateArea(): Long {
+    var area = 0L
+    var border = 0L
+    val pairs = windowed(2) + listOf(listOf(last(), first()))
+    for ((prev, cur) in pairs) {
+        // trapezoid formula https://en.wikipedia.org/wiki/Shoelace_formula
+        area += (prev.second + cur.second) * (prev.first - cur.first) / 2
+
+        border += sqrt((cur.first.toDouble() - prev.first).pow(2.0) + (cur.second.toDouble() - prev.second).pow(2.0)).toLong()
+    }
+
+    // https://en.wikipedia.org/wiki/Pick%27s_theorem
+    return area + border / 2 + 1
+}
+
+/**
+ * --- Day 18: Lavaduct Lagoon ---
+ *
+ * Thanks to your efforts, the machine parts factory is one of the first factories up and running since the lavafall came back. However, to catch up with the large backlog of parts requests, the factory will also need a large supply of lava for a while; the Elves have already started creating a large lagoon nearby for this purpose.
+ *
+ * However, they aren't sure the lagoon will be big enough; they've asked you to take a look at the dig plan (your puzzle input). For example:
+ *
+ * R 6 (#70c710)
+ * D 5 (#0dc571)
+ * L 2 (#5713f0)
+ * D 2 (#d2c081)
+ * R 2 (#59c680)
+ * D 2 (#411b91)
+ * L 5 (#8ceee2)
+ * U 2 (#caa173)
+ * L 1 (#1b58a2)
+ * U 2 (#caa171)
+ * R 2 (#7807d2)
+ * U 3 (#a77fa3)
+ * L 2 (#015232)
+ * U 2 (#7a21e3)
+ *
+ * The digger starts in a 1 meter cube hole in the ground. They then dig the specified number of meters up (U), down (D), left (L), or right (R), clearing full 1 meter cubes as they go. The directions are given as seen from above, so if "up" were north, then "right" would be east, and so on. Each trench is also listed with the color that the edge of the trench should be painted as an RGB hexadecimal color code.
+ *
+ * When viewed from above, the above example dig plan would result in the following loop of trench (#) having been dug out from otherwise ground-level terrain (.):
+ *
+ * #######
+ * #.....#
+ * ###...#
+ * ..#...#
+ * ..#...#
+ * ###.###
+ * #...#..
+ * ##..###
+ * .#....#
+ * .######
+ *
+ * At this point, the trench could contain 38 cubic meters of lava. However, this is just the edge of the lagoon; the next step is to dig out the interior so that it is one meter deep as well:
+ *
+ * #######
+ * #######
+ * #######
+ * ..#####
+ * ..#####
+ * #######
+ * #####..
+ * #######
+ * .######
+ * .######
+ *
+ * Now, the lagoon can contain a much more respectable 62 cubic meters of lava. While the interior is dug out, the edges are also painted according to the color codes in the dig plan.
+ *
+ * The Elves are concerned the lagoon won't be large enough; if they follow their dig plan, how many cubic meters of lava could it hold?
+ *
+ */
+private fun part1(lines: List<String>): Long {
+    val instructions = lines.parse()
+    val area = instructions.calculateAreaBySteps()
+
+    return area
+}
+
+private fun Iterable<Instruction>.calculateAreaByColors(): Long {
+    val border = mutableListOf<Pair<Long, Long>>()
+
+    var pair = 0L to 0L
+    for ((_, _, color) in this) {
+        val code = color.substringAfter('#')
+        val steps = code.dropLast(1).toLong(radix = 16)
+        val direction = when (val directionCode = code.last()) {
+            '0' -> Direction.RIGHT
+            '1' -> Direction.DOWN
+            '2' -> Direction.LEFT
+            '3' -> Direction.UP
+            else -> error("Unknown directionCode $directionCode")
+        }
+
+        pair = pair.getNextPair(direction, steps)
+
+        border += pair
+    }
+
+    return border.asReversed().calculateArea()
+}
+
+/**
+ * The Elves were right to be concerned; the planned lagoon would be much too small.
+ *
+ * After a few minutes, someone realizes what happened; someone swapped the color and instruction parameters when producing the dig plan. They don't have time to fix the bug; one of them asks if you can extract the correct instructions from the hexadecimal codes.
+ *
+ * Each hexadecimal code is six hexadecimal digits long. The first five hexadecimal digits encode the distance in meters as a five-digit hexadecimal number. The last hexadecimal digit encodes the direction to dig: 0 means R, 1 means D, 2 means L, and 3 means U.
+ *
+ * So, in the above example, the hexadecimal codes can be converted into the true instructions:
+ *
+ *     #70c710 = R 461937
+ *     #0dc571 = D 56407
+ *     #5713f0 = R 356671
+ *     #d2c081 = D 863240
+ *     #59c680 = R 367720
+ *     #411b91 = D 266681
+ *     #8ceee2 = L 577262
+ *     #caa173 = U 829975
+ *     #1b58a2 = L 112010
+ *     #caa171 = D 829975
+ *     #7807d2 = L 491645
+ *     #a77fa3 = U 686074
+ *     #015232 = L 5411
+ *     #7a21e3 = U 500254
+ *
+ * Digging out this loop and its interior produces a lagoon that can hold an impressive 952408144115 cubic meters of lava.
+ *
+ * Convert the hexadecimal color codes into the correct instructions; if the Elves follow this new dig plan, how many cubic meters of lava could the lagoon hold?
+ */
+private fun part2(lines: List<String>): Long {
+    val instructions = lines.parse()
+    val area = instructions.calculateAreaByColors()
+
+    return area
+}
+
+fun main() {
+
+    val testInput = readInput("aoc_2023/Day18_test")
+    val input = readInput("aoc_2023/Day18")
+
+    check(part1(testInput) == 62L)
+    part1(input).println()
+
+    check(part2(testInput) == 952408144115L)
+    part2(input).println()
+
+}
