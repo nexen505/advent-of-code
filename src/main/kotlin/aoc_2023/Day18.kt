@@ -37,7 +37,6 @@ private fun Pair<Long, Long>.getNextPair(direction: Direction, steps: Long) = wh
     Direction.DOWN -> first + steps to second
     Direction.LEFT -> first to second - steps
     Direction.RIGHT -> first to second + steps
-    else -> error("Unknown direction $direction")
 }
 
 private fun Iterable<Pair<Long, Long>>.calculateArea(): Long {
