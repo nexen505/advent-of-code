@@ -1,8 +1,8 @@
 package aoc_2023
 
 import Direction
-import calculateArea
-import calculateLength
+import calculateInterior
+import calculatePerimeter
 import println
 import readInput
 import java.util.SequencedSet
@@ -20,7 +20,7 @@ private fun String.parse(): Instruction {
     return Instruction(direction, steps, color)
 }
 
-private fun Iterable<Instruction>.calculateAreaBySteps(): Long {
+private fun Iterable<Instruction>.calculateAreaBySteps(): Double {
     val border = linkedSetOf<Pair<Long, Long>>()
 
     var pair = 0L to 0L
@@ -40,12 +40,11 @@ private fun Pair<Long, Long>.getNextPair(direction: Direction, steps: Long) = wh
     Direction.RIGHT -> first to second + steps
 }
 
-private fun SequencedSet<Pair<Long, Long>>.calculateEnclosedArea(): Long {
-    val area = reversed().calculateArea()
-    val length = calculateLength()
+private fun SequencedSet<Pair<Long, Long>>.calculateEnclosedArea(): Double {
+    val perimeter = calculatePerimeter()
+    val interior = calculateInterior()
 
-    // kinda https://en.wikipedia.org/wiki/Pick%27s_theorem
-    return area + length / 2 + 1
+    return perimeter + interior
 }
 
 /**
@@ -103,14 +102,14 @@ private fun SequencedSet<Pair<Long, Long>>.calculateEnclosedArea(): Long {
  * The Elves are concerned the lagoon won't be large enough; if they follow their dig plan, how many cubic meters of lava could it hold?
  *
  */
-private fun part1(lines: List<String>): Long {
+private fun part1(lines: List<String>): Double {
     val instructions = lines.parse()
     val area = instructions.calculateAreaBySteps()
 
     return area
 }
 
-private fun Iterable<Instruction>.calculateAreaByColors(): Long {
+private fun Iterable<Instruction>.calculateAreaByColors(): Double {
     val border = linkedSetOf<Pair<Long, Long>>()
 
     var pair = 0L to 0L
@@ -161,7 +160,7 @@ private fun Iterable<Instruction>.calculateAreaByColors(): Long {
  *
  * Convert the hexadecimal color codes into the correct instructions; if the Elves follow this new dig plan, how many cubic meters of lava could the lagoon hold?
  */
-private fun part2(lines: List<String>): Long {
+private fun part2(lines: List<String>): Double {
     val instructions = lines.parse()
     val area = instructions.calculateAreaByColors()
 
@@ -173,10 +172,10 @@ fun main() {
     val testInput = readInput("aoc_2023/Day18_test")
     val input = readInput("aoc_2023/Day18")
 
-    check(part1(testInput) == 62L)
+    check(part1(testInput) == 62.0)
     part1(input).println()
 
-    check(part2(testInput) == 952408144115L)
+    check(part2(testInput) == 952408144115.0)
     part2(input).println()
 
 }

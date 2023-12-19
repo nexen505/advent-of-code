@@ -1,7 +1,8 @@
 package aoc_2023
 
 import Direction
-import calculateArea
+import calculateInterior
+import calculatePerimeter
 import println
 import readInput
 import java.util.SequencedSet
@@ -20,8 +21,8 @@ private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
     private val size: Int
         get() = lines.size
 
-    fun findCycle(): SequencedSet<Pair<Int, Int>> {
-        val cycle = linkedSetOf(start)
+    fun findBoundary(): SequencedSet<Pair<Long, Long>> {
+        val cycle = linkedSetOf(start.first.toLong() to start.second.toLong())
         var current = calculateInitialState()
         var curCoords = start
 
@@ -44,7 +45,7 @@ private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
 
             current = lines[nextCoords.first][nextCoords.second] to nextDir
             curCoords = nextCoords
-            cycle.add(nextCoords)
+            cycle.add(curCoords.first.toLong() to curCoords.second.toLong())
         } while (current.first != START)
 
         return cycle
@@ -71,16 +72,6 @@ private data class Pipes(val lines: List<String>, val start: Pair<Int, Int>) {
             Direction.RIGHT to Direction.LEFT -> HORIZONTAL_PIPE to Direction.RIGHT
             else -> error("Incorrect state")
         }
-    }
-
-    fun countEnclosedGrounds(): Long {
-        val cycle = findCycle()
-            .map { it.first.toLong() to it.second.toLong() }
-            .asReversed()
-        val area = cycle.calculateArea()
-
-        // https://en.wikipedia.org/wiki/Pick%27s_theorem
-        return area - cycle.size / 2 + 1
     }
 
 }
@@ -200,11 +191,11 @@ private fun List<String>.parsePipes(): Pipes {
  *
  * Find the single giant loop starting at S. How many steps along the loop does it take to get from the starting position to the point farthest from the starting position?
  */
-private fun part1(lines: List<String>): Int {
+private fun part1(lines: List<String>): Double {
     val pipes = lines.parsePipes()
-    val cycle = pipes.findCycle()
+    val perimeter = pipes.findBoundary().calculatePerimeter()
 
-    return cycle.size / 2
+    return perimeter / 2
 }
 
 /**
@@ -300,10 +291,11 @@ private fun part1(lines: List<String>): Int {
  *
  * Figure out whether you have time to search for the nest by calculating the area within the loop. How many tiles are enclosed by the loop?
  */
-private fun part2(lines: List<String>): Long {
+private fun part2(lines: List<String>): Double {
     val pipes = lines.parsePipes()
+    val boundary = pipes.findBoundary()
 
-    return pipes.countEnclosedGrounds()
+    return boundary.calculateInterior()
 }
 
 fun main() {
@@ -312,12 +304,12 @@ fun main() {
     val testInput2 = readInput("aoc_2023/Day10_test2")
     val input = readInput("aoc_2023/Day10")
 
-    check(part1(testInput1) == 4)
-    check(part1(testInput2) == 8)
+    check(part1(testInput1) == 4.0)
+    check(part1(testInput2) == 8.0)
     part1(input).println()
 
-    check(part2(testInput1) == 1L)
-    check(part2(testInput2) == 1L)
+    check(part2(testInput1) == 1.0)
+    check(part2(testInput2) == 1.0)
     part2(input).println()
 
 }
