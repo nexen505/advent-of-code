@@ -2,11 +2,13 @@ package aoc_2023
 
 import println
 import readInput
+import java.util.Collections
 import java.util.EnumMap
-import java.util.LinkedList
+import java.util.PriorityQueue
 
 private const val ACCEPTED = "A"
 private const val REJECTED = "R"
+private val terminalStates = setOf(ACCEPTED, REJECTED)
 private const val START = "in"
 
 private enum class Category {
@@ -86,7 +88,7 @@ private fun Workflows.accept(rating: Rating): Boolean {
         }
 
         destination = newDestination
-    } while (destination !in setOf(ACCEPTED, REJECTED))
+    } while (destination !in terminalStates)
 
     return destination == ACCEPTED
 }
@@ -175,73 +177,88 @@ private fun part1(lines: List<String>): Long {
 private fun part2(lines: List<String>): Long {
     val ratingRange = 1L..4000L
     val (workflows, _) = lines.parse(ratingRange)
-    val queue = LinkedList(
-        listOf(
-            EnumMap(
-                mapOf(
-                    Category.X to ratingRange,
-                    Category.M to ratingRange,
-                    Category.A to ratingRange,
-                    Category.S to ratingRange
+    val combinationsCounts = sequence {
+        val terminalFirstCmp = compareBy<Pair<Map<Category, LongRange>, String>, String>({ o1, o2 ->
+            if (o1 in terminalStates) {
+                -1
+            } else if (o2 in terminalStates) {
+                1
+            } else {
+                o1.compareTo(o2)
+            }
+        }) {
+            it.second
+        }
+        val queue = PriorityQueue(terminalFirstCmp)
+        queue.add(
+            Collections.unmodifiableMap(
+                EnumMap(
+                    mapOf(
+                        Category.X to ratingRange,
+                        Category.M to ratingRange,
+                        Category.A to ratingRange,
+                        Category.S to ratingRange
+                    )
                 )
             ) to START
         )
-    )
 
-    while (queue.any { it.second != ACCEPTED }) {
-        val nonAccepted = queue.first { it.second != ACCEPTED }
-        queue.remove(nonAccepted)
-        val (currentRanges, currentDest) = nonAccepted
-        if (currentDest == REJECTED) {
-            continue
-        }
+        do {
+            val (previousRanges, previousDest) = queue.remove()
+            if (previousDest in terminalStates) {
+                if (previousDest == ACCEPTED) {
+                    val combinationsCount = previousRanges
+                        .values
+                        .asSequence()
+                        .map { it.last - it.first + 1 }
+                        .fold(1L) { mul, c -> mul * c }
 
-        val workflowRules = workflows[currentDest]!!
-        for ((workflowRange, nextDestination) in workflowRules) {
-            val nextRanges = EnumMap(currentRanges)
-            if (workflowRange == null) {
+                    yield(combinationsCount)
+                }
+
+                continue
+            }
+
+            val currentRanges = EnumMap(previousRanges)
+            val workflowRules = workflows[previousDest]!!
+            for ((workflowRange, nextDestination) in workflowRules) {
+                if (workflowRange == null) {
+                    queue.add(currentRanges to nextDestination)
+                    break
+                }
+
+                val (category, range) = workflowRange
+                if (category !in currentRanges) {
+                    continue
+                }
+
+                val currentRange = currentRanges[category]!!
+                val curl = currentRange.first
+                val curr = currentRange.last
+                val wrl = range.first
+                val wrr = range.last
+                val intersection = maxOf(curl, wrl)..minOf(curr, wrr)
+                if (intersection.isEmpty()) {
+                    continue
+                }
+
+                val nextRanges = EnumMap(currentRanges)
+                nextRanges[category] = intersection
                 queue.add(nextRanges to nextDestination)
-                break
-            }
 
-            val (category, range) = workflowRange
-            if (category !in currentRanges) {
-                continue
+                val subtraction = when {
+                    curl < intersection.first -> curl..<intersection.first
+                    curr > intersection.last -> intersection.last + 1..curr
+                    else -> null
+                }
+                subtraction
+                    ?.takeUnless { it.isEmpty() }
+                    ?.run { currentRanges[category] = this }
             }
-
-            val currentRange = currentRanges[category]!!
-            val curl = currentRange.first
-            val curr = currentRange.last
-            val wrl = range.first
-            val wrr = range.last
-            val intersection = maxOf(curl, wrl)..minOf(curr, wrr)
-            if (intersection.isEmpty()) {
-                continue
-            }
-
-            nextRanges[category] = intersection
-            queue.add(nextRanges to nextDestination)
-            if (currentRange == intersection) {
-                break
-            }
-
-            val subtraction = when {
-                curl < intersection.first -> curl..<intersection.first
-                curr > intersection.last -> intersection.last + 1..curr
-                else -> null
-            }
-            subtraction?.run { currentRanges[category] = this }
-        }
+        } while (queue.isNotEmpty())
     }
 
-    return queue
-        .asSequence()
-        .map { it.first.toMap() }
-        .sumOf { m ->
-            m.values
-                .map { it.last - it.first + 1 }
-                .fold(1L) { mul, c -> mul * c }
-        }
+    return combinationsCounts.sum()
 }
 
 fun main() {
