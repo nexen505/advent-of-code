@@ -7,60 +7,42 @@ private const val OPERATIONAL = '.'
 private const val DAMAGED = '#'
 private const val UNKNOWN = '?'
 
-private fun interface Counter {
+private typealias Counter = (String, List<Int>) -> Long
 
-    fun count(line: String, groups: List<Int>, isDamaged: Boolean): Long
-
-}
-
-private fun countWithCounter(line: String, groups: List<Int>, isDamagedPreviously: Boolean, counter: Counter): Long {
+private fun countWithCounter(line: String, groups: List<Int>, counter: Counter): Long {
     if (line.isEmpty()) {
-        return if (groups.sum() == 0) 1 else 0
+        return if (groups.isEmpty()) 1 else 0
     }
-    if (groups.sum() == 0) {
+    if (groups.isEmpty()) {
         return if (line.contains(DAMAGED)) 0 else 1
     }
 
+    var result = 0L
+
     val current = line.first()
-    val next = line.substring(1)
-    if (current == DAMAGED) {
-        if (isDamagedPreviously && groups.first() == 0) {
-            return 0
-        }
+    if (current in setOf(OPERATIONAL, UNKNOWN)) {
+        val nextLine = line.substring(1)
 
-        val nextGroups = groups.toMutableList()
-        --nextGroups[0]
-        return counter.count(next, nextGroups, true)
+        result += counter(nextLine, groups)
     }
-
-    if (current == OPERATIONAL) {
+    if (current in setOf(DAMAGED, UNKNOWN)) {
         val firstGroup = groups.first()
-        if (isDamagedPreviously && firstGroup > 0) {
-            return 0
+
+        if (firstGroup <= line.length &&
+            OPERATIONAL !in line.substring(0, firstGroup) &&
+            (firstGroup == line.length || line[firstGroup] != DAMAGED)) {
+            val nextLine = line.substring(minOf(firstGroup + 1, line.length))
+            val nextGroups = groups.subList(1, groups.size)
+
+            result += counter(nextLine, nextGroups)
         }
-
-        val nextGroups = if (firstGroup == 0) groups.subList(1, groups.size) else groups
-        return counter.count(next, nextGroups, false)
     }
 
-    if (isDamagedPreviously && groups.first() == 0) {
-        val nextGroups = groups.subList(1, groups.size)
-
-        return counter.count(next, nextGroups, false)
-    }
-
-    val nextGroups = groups.toMutableList()
-    --nextGroups[0]
-    val damagedSubCount = counter.count(next, nextGroups, true)
-    if (isDamagedPreviously) {
-        return damagedSubCount
-    }
-
-    return damagedSubCount + counter.count(next, groups, false)
+    return result
 }
 
-private fun count(line: String, groups: List<Int>, isDamaged: Boolean = false): Long {
-    return countWithCounter(line, groups, isDamaged) { l, g, d -> count(l, g, d) }
+private fun count(line: String, groups: List<Int>): Long {
+    return countWithCounter(line, groups) { l, g -> count(l, g) }
 }
 
 /**
@@ -192,12 +174,11 @@ private fun part2(lines: List<String>, extensionFactor: Int = 5): Long = lines.s
 private fun countMemoized(
     line: String,
     groups: List<Int>,
-    isDamagedPreviously: Boolean = false,
-    cache: MutableMap<Triple<String, List<Int>, Boolean>, Long> = mutableMapOf()
+    cache: MutableMap<Pair<String, List<Int>>, Long> = mutableMapOf()
 ): Long {
-    val key = Triple(line, groups, isDamagedPreviously)
+    val key = line to groups
     if (key !in cache) {
-        cache[key] = countWithCounter(key.first, key.second, key.third) { l, g, d -> countMemoized(l, g, d, cache) }
+        cache[key] = countWithCounter(key.first, key.second) { l, g -> countMemoized(l, g, cache) }
     }
 
     return cache[key]!!
