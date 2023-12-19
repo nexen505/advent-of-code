@@ -7,49 +7,67 @@ import java.util.LinkedList
 
 private const val ACCEPTED = "A"
 private const val REJECTED = "R"
-
-private typealias Rating = EnumMap<Category, Long>
-private typealias Workflow = Pair<String, List<(Rating) -> String?>>
-private typealias Workflows = Map<String, List<(Rating) -> String?>>
+private const val START = "in"
 
 private enum class Category {
     X, M, A, S
 }
 
-private fun String.parseWorkflow(): Workflow {
-    val delim = indexOf('{')
-    val name = substring(0, delim)
-    val rules: List<(Rating) -> String?> = substring(delim)
+private typealias Rating = EnumMap<Category, Long>
+private typealias WorkflowRange = Pair<Category, LongRange>
+private typealias WorkflowRule = Pair<WorkflowRange?, String>
+private typealias Workflows = Map<String, List<WorkflowRule>>
+
+private fun List<String>.parse(range: LongRange): Pair<Workflows, List<Rating>> {
+    val delimiterIdx = indexOf("")
+    val workflowStrings = subList(0, delimiterIdx)
+    val ratingStrings = subList(delimiterIdx + 1, size)
+    val workflows = workflowStrings
+        .asSequence()
+        .filterNot { it.isBlank() }
+        .associate { it.parseWorkflowRange(range) }
+    val ratings = ratingStrings
+        .asSequence()
+        .filterNot { it.isBlank() }
+        .map { it.parseRating() }
+        .toList()
+
+    return workflows to ratings
+}
+
+private fun String.parseWorkflowRange(range: LongRange): Pair<String, List<WorkflowRule>> {
+    val name = substringBefore('{')
+    val ranges = substringAfter('{')
         .trim('{', '}')
         .split(',')
         .map { s ->
             val ruleDelim = s.indexOf(':')
             if (ruleDelim < 0) {
-                return@map { s }
+                return@map null to s
             }
 
             val (criterion, dest) = s.split(':')
 
             val gtIdx = criterion.indexOf('>')
-            if (gtIdx >= 0) {
+            return@map if (gtIdx >= 0) {
                 val category = Category.valueOf(criterion.substring(0, gtIdx).uppercase())
                 val value = criterion.substring(gtIdx + 1).toLong()
 
-                return@map { if (it[category] != null && it[category]!! > value) dest else null }
+                (category to value + 1..range.last) to dest
             } else {
                 val ltIdx = criterion.indexOf('<')
                 val category = Category.valueOf(criterion.substring(0, ltIdx).uppercase())
                 val value = criterion.substring(ltIdx + 1).toLong()
 
-                return@map { if (it[category] != null && it[category]!! < value) dest else null }
+                (category to range.first..<value) to dest
             }
         }
 
-    return name to rules
+    return name to ranges
 }
 
 private fun String.parseRating(): Rating = trim('{', '}')
-    .split(',')
+    .splitToSequence(',')
     .map { it.split('=') }
     .associateTo(EnumMap(Category::class.java)) { (c, v) ->
         val category = Category.valueOf(c.uppercase())
@@ -58,31 +76,19 @@ private fun String.parseRating(): Rating = trim('{', '}')
         category to value
     }
 
-private fun List<String>.parse(): Pair<Workflows, List<Rating>> {
-    val delimiterIdx = indexOf("")
-    val workflowStrings = subList(0, delimiterIdx)
-    val ratingStrings = subList(delimiterIdx + 1, size)
-    val workflows = workflowStrings
-        .filterNot { it.isBlank() }
-        .map { it.parseWorkflow() }
-        .associateBy({ it.first }, { it.second })
-    val ratings = ratingStrings
-        .filterNot { it.isBlank() }
-        .map { it.parseRating() }
+private fun Workflows.accept(rating: Rating): Boolean {
+    var destination: String? = START
 
-    return workflows to ratings
-}
+    do {
+        val ranges = this[destination]!!
+        val (_, newDestination) = ranges.first { (condition, _) ->
+            condition?.let { (category, range) -> rating[category] in range } ?: true
+        }
 
-private fun Workflows.accepts(rating: Rating): Boolean {
-    var start: String? = "in"
+        destination = newDestination
+    } while (destination !in setOf(ACCEPTED, REJECTED))
 
-    while (start != null && start !in setOf(ACCEPTED, REJECTED)) {
-        val workflow = this[start]!!
-
-        start = workflow.firstNotNullOfOrNull { it.invoke(rating) }
-    }
-
-    return start == ACCEPTED
+    return destination == ACCEPTED
 }
 
 /**
@@ -145,10 +151,11 @@ private fun Workflows.accepts(rating: Rating): Boolean {
  *
  */
 private fun part1(lines: List<String>): Long {
-    val (workflows, ratings) = lines.parse()
+    val (workflows, ratings) = lines.parse(Long.MIN_VALUE..Long.MAX_VALUE)
 
     return ratings
-        .filter { workflows.accepts(it) }
+        .asSequence()
+        .filter { workflows.accept(it) }
         .sumOf { it.values.sum() }
 }
 
@@ -166,123 +173,75 @@ private fun part1(lines: List<String>): Long {
  * Consider only your list of workflows; the list of part ratings that the Elves wanted you to sort is no longer relevant. How many distinct combinations of ratings will be accepted by the Elves' workflows?
  */
 private fun part2(lines: List<String>): Long {
-    val minValue = 1L
-    val maxValue = 4000L
-    val workflowRanges = lines.parseWorkflowRanges(minValue..maxValue)
+    val ratingRange = 1L..4000L
+    val (workflows, _) = lines.parse(ratingRange)
     val queue = LinkedList(
         listOf(
             EnumMap(
                 mapOf(
-                    Category.X to minValue..maxValue,
-                    Category.M to minValue..maxValue,
-                    Category.A to minValue..maxValue,
-                    Category.S to minValue..maxValue
+                    Category.X to ratingRange,
+                    Category.M to ratingRange,
+                    Category.A to ratingRange,
+                    Category.S to ratingRange
                 )
-            ) to "in"
+            ) to START
         )
     )
 
     while (queue.any { it.second != ACCEPTED }) {
         val nonAccepted = queue.first { it.second != ACCEPTED }
         queue.remove(nonAccepted)
-        val (oldRanges, oldDestination) = nonAccepted
-        if (oldDestination == REJECTED) {
+        val (currentRanges, currentDest) = nonAccepted
+        if (currentDest == REJECTED) {
             continue
         }
 
-        val rules = workflowRanges[oldDestination]!!
-        val currentRanges = EnumMap(oldRanges)
-        for ((range, destination) in rules) {
-            val newRanges = EnumMap(currentRanges)
-            if (range == null) {
-                queue.add(newRanges to destination)
+        val workflowRules = workflows[currentDest]!!
+        for ((workflowRange, nextDestination) in workflowRules) {
+            val nextRanges = EnumMap(currentRanges)
+            if (workflowRange == null) {
+                queue.add(nextRanges to nextDestination)
                 break
             }
 
-            val (category, workflowRange) = range
-            if (category !in oldRanges) {
+            val (category, range) = workflowRange
+            if (category !in currentRanges) {
                 continue
             }
 
             val currentRange = currentRanges[category]!!
             val curl = currentRange.first
             val curr = currentRange.last
-            val wrl = workflowRange.first
-            val wrr = workflowRange.last
-            val newl = maxOf(curl, wrl)
-            val newr = minOf(curr, wrr)
-            if (newl > newr) {
+            val wrl = range.first
+            val wrr = range.last
+            val intersection = maxOf(curl, wrl)..minOf(curr, wrr)
+            if (intersection.isEmpty()) {
                 continue
             }
 
-            val newRange = newl..newr
-            newRanges[category] = newRange
-            queue.add(newRanges to destination)
-            if (currentRange == newRange) {
+            nextRanges[category] = intersection
+            queue.add(nextRanges to nextDestination)
+            if (currentRange == intersection) {
                 break
             }
 
-            if (newl in currentRange && curl < newl) {
-                currentRanges[category] = curl..<newl
-            } else if (newr in currentRange && curr > newr) {
-                currentRanges[category] = newr + 1..curr
+            val subtraction = when {
+                curl < intersection.first -> curl..<intersection.first
+                curr > intersection.last -> intersection.last + 1..curr
+                else -> null
             }
+            subtraction?.run { currentRanges[category] = this }
         }
     }
 
-    val sum = queue
-        .map { it.first }
+    return queue
+        .asSequence()
+        .map { it.first.toMap() }
         .sumOf { m ->
-            m.values.fold(1L) { res, r ->
-                res * (r.last - r.first + 1)
-            }
+            m.values
+                .map { it.last - it.first + 1 }
+                .fold(1L) { mul, c -> mul * c }
         }
-    return sum
-}
-
-private typealias WorkflowRange = Pair<Pair<Category, LongRange>?, String>
-private typealias WorkflowRanges = List<WorkflowRange>
-
-private fun List<String>.parseWorkflowRanges(range: LongRange): Map<String, WorkflowRanges> {
-    val delimiterIdx = indexOf("")
-    val workflowStrings = subList(0, delimiterIdx)
-
-    return workflowStrings
-        .filterNot { it.isBlank() }
-        .map { it.parseWorkflowRange(range) }
-        .associateBy({ it.first }, { it.second })
-}
-
-private fun String.parseWorkflowRange(range: LongRange): Pair<String, WorkflowRanges> {
-    val delim = indexOf('{')
-    val name = substring(0, delim)
-    val ranges: WorkflowRanges = substring(delim)
-        .trim('{', '}')
-        .split(',')
-        .map { s ->
-            val ruleDelim = s.indexOf(':')
-            if (ruleDelim < 0) {
-                return@map null to s
-            }
-
-            val (criterion, dest) = s.split(':')
-
-            val gtIdx = criterion.indexOf('>')
-            return@map if (gtIdx >= 0) {
-                val category = Category.valueOf(criterion.substring(0, gtIdx).uppercase())
-                val value = criterion.substring(gtIdx + 1).toLong()
-
-                (category to value + 1..range.last) to dest
-            } else {
-                val ltIdx = criterion.indexOf('<')
-                val category = Category.valueOf(criterion.substring(0, ltIdx).uppercase())
-                val value = criterion.substring(ltIdx + 1).toLong()
-
-                (category to range.first..<value) to dest
-            }
-        }
-
-    return name to ranges
 }
 
 fun main() {
