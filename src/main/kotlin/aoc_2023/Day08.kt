@@ -1,5 +1,6 @@
 package aoc_2023
 
+import lcm
 import println
 import readInput
 
@@ -74,9 +75,6 @@ private fun part1(lines: List<String>): Long {
 
     return steps
 }
-
-private tailrec fun gcd(a: Long, b: Long): Long = if (b == 0L) a else gcd(b, a % b)
-private fun lcm(a: Long, b: Long) = a * b / gcd(a, b)
 
 /**
  * --- Part Two ---

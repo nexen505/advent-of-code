@@ -24,6 +24,9 @@ fun String.md5() = BigInteger(1, MessageDigest.getInstance("MD5").digest(toByteA
  */
 fun Any?.println() = println(this)
 
+tailrec fun gcd(a: Long, b: Long): Long = if (b == 0L) a else gcd(b, a % b)
+fun lcm(a: Long, b: Long) = a * b / gcd(a, b)
+
 enum class Direction {
     UP, RIGHT, DOWN, LEFT;
 

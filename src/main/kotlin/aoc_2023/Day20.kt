@@ -1,11 +1,90 @@
 package aoc_2023
 
+import lcm
 import println
 import readInput
+import java.util.LinkedList
 
 private const val BROADCASTER = "broadcaster"
-private const val FLIP_FLOP = "%"
-private const val CONJUNCTION = "&"
+private const val FLIP_FLOP = '%'
+private const val CONJUNCTION = '&'
+
+private enum class ModuleType {
+    BROADCASTER, FLIP_FLOP, CONJUNCTION
+}
+
+private enum class Pulse {
+    LOW, HIGH
+}
+
+private enum class Trigger {
+    ON, OFF
+}
+
+private interface Module<T> {
+
+    val name: String
+    val type: ModuleType
+    val outputs: List<String>
+    var memory: T
+
+}
+
+private sealed class AbstractModule<T>(
+    final override val name: String,
+    final override val type: ModuleType,
+    final override val outputs: List<String>,
+    final override var memory: T
+) : Module<T> {
+
+    init {
+        check(outputs.isNotEmpty())
+    }
+
+}
+
+private class Broadcaster(outputs: List<String>) :
+    AbstractModule<Any?>(BROADCASTER, ModuleType.BROADCASTER, outputs, null) {}
+
+private class FlipFlop(name: String, outputs: List<String>) :
+    AbstractModule<Trigger>(name, ModuleType.FLIP_FLOP, outputs, Trigger.OFF) {}
+
+private class Conjunction(name: String, outputs: List<String>) :
+    AbstractModule<MutableMap<String, Pulse>>(name, ModuleType.CONJUNCTION, outputs, mutableMapOf()) {}
+
+private fun List<String>.parse(): Map<String, Module<*>> {
+    val modules = associate {
+        val (left, right) = it.split(" -> ")
+        val outputs = right.split(", ")
+
+        if (left == BROADCASTER) {
+            BROADCASTER to Broadcaster(outputs)
+        } else {
+            val type = left.first()
+            val name = left.substring(1)
+
+            name to when (type) {
+                FLIP_FLOP -> FlipFlop(name, outputs)
+                CONJUNCTION -> Conjunction(name, outputs)
+                else -> error("Unknown type: $type")
+            }
+        }
+    }
+
+    for ((name, module) in modules) {
+        for (output in module.outputs) {
+            if (output in modules) {
+                val outputModule = modules[output]!!
+
+                if (outputModule is Conjunction) {
+                    outputModule.memory[name] = Pulse.LOW
+                }
+            }
+        }
+    }
+
+    return modules
+}
 
 /**
  * --- Day 20: Pulse Propagation ---
@@ -122,12 +201,128 @@ private const val CONJUNCTION = "&"
  * Consult your module configuration; determine the number of low pulses and high pulses that would be sent after pushing the button 1000 times, waiting for all pulses to be fully handled after each push of the button. What do you get if you multiply the total number of low pulses sent by the total number of high pulses sent?
  *
  */
-private fun part1(lines: List<String>, pushes: Long = 1000): Long {
-    return lines.size.toLong()
+private fun part1(lines: List<String>, pushes: Int = 1000): Long {
+    val modules = lines.parse()
+    val broadcaster = modules[BROADCASTER]!!
+
+    var low = 0L
+    var high = 0L
+    for (k in 0..<pushes) {
+        ++low
+
+        val queue = broadcaster.outputs.mapTo(LinkedList()) {
+            Triple(broadcaster, it, Pulse.LOW)
+        }
+
+        do {
+            val (origin, targetName, pulse) = queue.remove()
+
+            if (pulse == Pulse.LOW) {
+                ++low
+            } else {
+                ++high
+            }
+
+            if (targetName !in modules) {
+                continue
+            }
+
+            val target = modules[targetName]!!
+            triggerModules(queue, origin, target, pulse)
+        } while (queue.isNotEmpty())
+    }
+
+    return low * high
 }
 
+private fun triggerModules(
+    moduleStates: MutableList<Triple<Module<*>, String, Pulse>>,
+    origin: Module<*>,
+    target: Module<*>,
+    pulse: Pulse
+) {
+    when (target) {
+        is FlipFlop -> {
+            if (pulse == Pulse.LOW) {
+                target.memory = if (target.memory == Trigger.OFF) Trigger.ON else Trigger.OFF
+
+                val outgoing = if (target.memory == Trigger.ON) Pulse.HIGH else Pulse.LOW
+                for (outputName in target.outputs) {
+                    moduleStates.add(Triple(target, outputName, outgoing))
+                }
+            }
+        }
+
+        is Conjunction -> {
+            target.memory[origin.name] = pulse
+
+            val outgoing = if (target.memory.values.all { it == Pulse.HIGH }) Pulse.LOW else Pulse.HIGH
+            for (outputName in target.outputs) {
+                moduleStates.add(Triple(target, outputName, outgoing))
+            }
+        }
+
+        else -> error("Unexpected target: $target")
+    }
+}
+
+/**
+ * --- Part Two ---
+ *
+ * The final machine responsible for moving the sand down to Island Island has a module attached named rx. The machine turns on when a single low pulse is sent to rx.
+ *
+ * Reset all modules to their default states. Waiting for all pulses to be fully handled after each button press, what is the fewest number of button presses required to deliver a single low pulse to the module named rx?
+ *
+ */
 private fun part2(lines: List<String>): Long {
-    return lines.size.toLong()
+    val modules = lines.parse()
+    val broadcaster = modules[BROADCASTER]!!
+    val feed = modules.values.single { "rx" in it.outputs }
+    val cycleLengths = mutableMapOf<Module<*>, Long>()
+    val feedTimes = modules
+        .values
+        .mapNotNull {
+            if (feed.name !in it.outputs) {
+                null
+            } else {
+                it to 0L
+            }
+        }
+        .associate { it }
+        .toMutableMap()
+    var pushes = 0L
+
+    while (true) {
+        ++pushes
+
+        val queue = broadcaster.outputs.mapTo(LinkedList()) {
+            Triple(broadcaster, it, Pulse.LOW)
+        }
+
+        do {
+            val (origin, targetName, pulse) = queue.remove()
+            if (targetName !in modules) {
+                continue
+            }
+
+            val target = modules[targetName]!!
+            val isFed = target == feed && pulse == Pulse.HIGH
+            if (isFed) {
+                feedTimes.merge(origin, 1L) { a, b -> a + b }
+
+                if (origin !in cycleLengths) {
+                    cycleLengths[origin] = pushes
+                }
+
+                val allFed = feedTimes.values.all { it == 1L }
+                if (allFed) {
+                    return cycleLengths.values.fold(1L) { res, cycleLength -> lcm(res, cycleLength) }
+                }
+            }
+
+            triggerModules(queue, origin, target, pulse)
+        } while (queue.isNotEmpty())
+    }
 }
 
 fun main() {
@@ -140,7 +335,6 @@ fun main() {
     check(part1(testInput2) == 11687500L)
     part1(input).println()
 
-    check(part2(testInput1) == 32000000L)
     part2(input).println()
 
 }
