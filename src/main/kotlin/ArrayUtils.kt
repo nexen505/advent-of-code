@@ -1,5 +1,6 @@
 fun List<String>.toCharArray2(): Array<CharArray> = map { it.toCharArray() }.toTypedArray()
 
+fun Array<BooleanArray>.size2(): Pair<Int, Int> = size to this[0].size
 fun Array<CharArray>.size2(): Pair<Int, Int> = size to this[0].size
 
 fun Array<CharArray>.deepCopyOf(): Array<CharArray> = Array(size) { this[it].copyOf() }
