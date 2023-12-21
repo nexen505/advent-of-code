@@ -9,10 +9,6 @@ private const val BROADCASTER = "broadcaster"
 private const val FLIP_FLOP = '%'
 private const val CONJUNCTION = '&'
 
-private enum class ModuleType {
-    BROADCASTER, FLIP_FLOP, CONJUNCTION
-}
-
 private enum class Pulse {
     LOW, HIGH
 }
@@ -24,7 +20,6 @@ private enum class Trigger {
 private interface Module<T> {
 
     val name: String
-    val type: ModuleType
     val outputs: List<String>
     var memory: T
 
@@ -32,7 +27,6 @@ private interface Module<T> {
 
 private sealed class AbstractModule<T>(
     final override val name: String,
-    final override val type: ModuleType,
     final override val outputs: List<String>,
     final override var memory: T
 ) : Module<T> {
@@ -41,16 +35,29 @@ private sealed class AbstractModule<T>(
         check(outputs.isNotEmpty())
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is AbstractModule<*>) return false
+
+        if (name != other.name) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return name.hashCode()
+    }
+
 }
 
 private class Broadcaster(outputs: List<String>) :
-    AbstractModule<Any?>(BROADCASTER, ModuleType.BROADCASTER, outputs, null) {}
+    AbstractModule<Any?>(BROADCASTER, outputs, null) {}
 
 private class FlipFlop(name: String, outputs: List<String>) :
-    AbstractModule<Trigger>(name, ModuleType.FLIP_FLOP, outputs, Trigger.OFF) {}
+    AbstractModule<Trigger>(name, outputs, Trigger.OFF) {}
 
 private class Conjunction(name: String, outputs: List<String>) :
-    AbstractModule<MutableMap<String, Pulse>>(name, ModuleType.CONJUNCTION, outputs, mutableMapOf()) {}
+    AbstractModule<MutableMap<String, Pulse>>(name, outputs, mutableMapOf()) {}
 
 private fun List<String>.parse(): Map<String, Module<*>> {
     val modules = associate {
@@ -73,13 +80,9 @@ private fun List<String>.parse(): Map<String, Module<*>> {
 
     for ((name, module) in modules) {
         for (output in module.outputs) {
-            if (output in modules) {
-                val outputModule = modules[output]!!
-
-                if (outputModule is Conjunction) {
-                    outputModule.memory[name] = Pulse.LOW
-                }
-            }
+            modules[output]
+                ?.let { it as? Conjunction }
+                ?.run { memory[name] = Pulse.LOW }
         }
     }
 
@@ -223,19 +226,14 @@ private fun part1(lines: List<String>, pushes: Int = 1000): Long {
                 ++high
             }
 
-            if (targetName !in modules) {
-                continue
-            }
-
-            val target = modules[targetName]!!
-            triggerModules(queue, origin, target, pulse)
+            modules[targetName]?.run { trigger(queue, origin, this, pulse) }
         } while (queue.isNotEmpty())
     }
 
     return low * high
 }
 
-private fun triggerModules(
+private fun trigger(
     moduleStates: MutableList<Triple<Module<*>, String, Pulse>>,
     origin: Module<*>,
     target: Module<*>,
@@ -262,7 +260,7 @@ private fun triggerModules(
             }
         }
 
-        else -> error("Unexpected target: $target")
+        else -> error("Unexpected target to trigger: $target")
     }
 }
 
@@ -281,15 +279,8 @@ private fun part2(lines: List<String>): Long {
     val cycleLengths = mutableMapOf<Module<*>, Long>()
     val feedTimes = modules
         .values
-        .mapNotNull {
-            if (feed.name !in it.outputs) {
-                null
-            } else {
-                it to 0L
-            }
-        }
-        .associate { it }
-        .toMutableMap()
+        .filter { feed.name in it.outputs }
+        .associateWithTo(mutableMapOf()) { false }
     var pushes = 0L
 
     while (true) {
@@ -301,26 +292,23 @@ private fun part2(lines: List<String>): Long {
 
         do {
             val (origin, targetName, pulse) = queue.remove()
-            if (targetName !in modules) {
-                continue
-            }
-
-            val target = modules[targetName]!!
+            val target = modules[targetName] ?: continue
             val isFed = target == feed && pulse == Pulse.HIGH
+
             if (isFed) {
-                feedTimes.merge(origin, 1L) { a, b -> a + b }
+                feedTimes[origin] = true
 
                 if (origin !in cycleLengths) {
                     cycleLengths[origin] = pushes
                 }
 
-                val allFed = feedTimes.values.all { it == 1L }
+                val allFed = feedTimes.values.all { it }
                 if (allFed) {
                     return cycleLengths.values.fold(1L) { res, cycleLength -> lcm(res, cycleLength) }
                 }
             }
 
-            triggerModules(queue, origin, target, pulse)
+            trigger(queue, origin, target, pulse)
         } while (queue.isNotEmpty())
     }
 }
