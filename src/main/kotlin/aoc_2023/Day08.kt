@@ -137,7 +137,7 @@ private fun part2(lines: List<String>): Long {
 
             steps
         }
-        .fold(1L) { res, v -> lcm(res, v) }
+        .lcm()
 
     return result
 }

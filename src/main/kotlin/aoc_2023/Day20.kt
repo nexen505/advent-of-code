@@ -304,7 +304,7 @@ private fun part2(lines: List<String>): Long {
 
                 val allFed = feedTimes.values.all { it }
                 if (allFed) {
-                    return cycleLengths.values.fold(1L) { res, cycleLength -> lcm(res, cycleLength) }
+                    return cycleLengths.values.lcm()
                 }
             }
 

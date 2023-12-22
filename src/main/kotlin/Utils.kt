@@ -24,8 +24,11 @@ fun String.md5() = BigInteger(1, MessageDigest.getInstance("MD5").digest(toByteA
  */
 fun Any?.println() = println(this)
 
-tailrec fun gcd(a: Long, b: Long): Long = if (b == 0L) a else gcd(b, a % b)
-fun lcm(a: Long, b: Long) = a * b / gcd(a, b)
+private tailrec infix fun Long.gcd(b: Long): Long = if (b == 0L) this else b gcd (this % b)
+infix fun Long.lcm(b: Long): Long = this * b / (this gcd b)
+
+fun Iterable<Long>.lcm(): Long = fold(1L) { res, v -> res lcm v }
+fun Sequence<Long>.lcm(): Long = fold(1L) { res, v -> res lcm v }
 
 enum class Direction {
     UP, RIGHT, DOWN, LEFT;
