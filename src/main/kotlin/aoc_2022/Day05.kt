@@ -107,7 +107,10 @@ private fun List<String>.parseStacks(): Array<LinkedList<Char>> {
 
 private fun List<String>.getDelimiterIdx(): Int = indexOfFirst { it.isBlank() }
 
-private fun List<String>.manipulate(stacks: Array<LinkedList<Char>>, manipulator: Array<LinkedList<Char>>.(Triple<Int, Int, Int>) -> Unit) {
+private inline fun List<String>.manipulate(
+    stacks: Array<LinkedList<Char>>,
+    manipulator: Array<LinkedList<Char>>.(Triple<Int, Int, Int>) -> Unit
+) {
     val delimiterIdx = getDelimiterIdx()
 
     for (i in delimiterIdx + 1..<size) {
@@ -118,7 +121,7 @@ private fun List<String>.manipulate(stacks: Array<LinkedList<Char>>, manipulator
 
         val (count, from, to) = line
             .splitToSequence(' ')
-            .mapNotNull { it.runCatching { toInt() }.getOrNull() }
+            .mapNotNull { it.toIntOrNull() }
             .take(3)
             .toList()
 

@@ -32,7 +32,7 @@ private data class File(
         }
     }
 
-    fun visit(visitor: (File) -> Unit) {
+    inline fun visit(visitor: (File) -> Unit) {
         val deque = LinkedList(listOf(this))
 
         while (deque.isNotEmpty()) {
@@ -220,11 +220,11 @@ private fun part2(lines: List<String>, totalSpace: Long = 70000000L, leastUnused
     var min: Long? = null
     root.visit {
         if (it.type == Type.DIRECTORY && unusedSpace + it.size >= leastUnusedSpace) {
-            min = minOf(min ?: 0, it.size)
+            min = minOf(min ?: Long.MAX_VALUE, it.size)
         }
     }
 
-    return null
+    return min
 }
 
 fun main() {
