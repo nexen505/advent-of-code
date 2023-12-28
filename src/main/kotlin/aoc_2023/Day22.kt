@@ -2,108 +2,69 @@ package aoc_2023
 
 import println
 import readInput
+import java.util.LinkedList
 
-private typealias Coord = Triple<Int, Int, Int>
+private fun List<String>.parse(): List<IntArray> =
+    map { line ->
+        line
+            .replace("~", ",")
+            .split(",")
+            .map { it.toInt() }
+            .toIntArray()
+    }
+        .sortedBy { it[2] }
 
-private enum class BrickType {
-    X, Y, Z
+private fun IntArray.overlaps(other: IntArray): Boolean {
+    return maxOf(this[0], other[0]) <= minOf(this[3], other[3])
+            && maxOf(this[1], other[1]) <= minOf(this[4], other[4])
 }
 
-private data class Brick(val coords: Pair<Coord, Coord>, val type: BrickType) {}
-private typealias Projection = Array<Array<MutableSet<Brick>>>
+private fun List<IntArray>.sortAndMap(): Triple<List<IntArray>, Array<Set<Int>>, Array<Set<Int>>> {
+    for ((i, bi) in withIndex()) {
+        var zMax = 1
+        for (j in 0..<i) {
+            val bj = this[j]
 
-private fun String.parse(): Brick {
-    val (leftString, rightString) = split("~")
-    val (xl, yl, zl) = leftString.split(",").map { it.toInt() }
-    val (xr, yr, zr) = rightString.split(",").map { it.toInt() }
-    val type = if (xl == xr) {
-        if (yl == yr) {
-            check(zl != zr)
-
-            BrickType.Z
-        } else {
-            check(zl == zr)
-
-            BrickType.Y
+            if (bi.overlaps(bj)) {
+                zMax = maxOf(zMax, bj[5] + 1)
+            }
         }
-    } else if (yl == yr) {
-        check(zl == zr)
 
-        BrickType.X
-    } else {
-        error("Incorrect input")
+        bi[5] -= bi[2] - zMax
+        bi[2] = zMax
     }
 
-    val left = Coord(xl, yl, zl)
-    val right = Coord(xr, yr, zr)
-    val start = if (zl < zr) left else right
-    val end = if (start == left) right else left
-    return Brick(start to end, type)
-}
+    val sortedBricks = sortedBy { it[2] }
+    val kv = Array(sortedBricks.size) { mutableSetOf<Int>() }
+    val vk = Array(sortedBricks.size) { mutableSetOf<Int>() }
 
-private fun List<String>.parse(): List<Brick> = map { it.parse() }.sortedBy { it.coords.first.third }
-
-private fun List<Brick>.project(): Array<Array<Array<Brick?>>> {
-    val xmax = asSequence()
-        .map { it.coords }
-        .flatMap { it.toList() }
-        .maxOf { it.first }
-    val ymax = asSequence()
-        .map { it.coords }
-        .flatMap { it.toList() }
-        .maxOf { it.second }
-    val zmax = asSequence()
-        .map { it.coords }
-        .flatMap { it.toList() }
-        .maxOf { it.third }
-    val area: Array<Array<Array<Brick?>>> = Array(zmax + 1) { Array(xmax + 1) { Array(ymax + 1) { null } } }
-
-    for (brick in this) {
-        val (coords, type) = brick
-        val (left, right) = coords
-        val (xl, yl, zl) = left
-        val (xr, yr, zr) = right
-
-        when (type) {
-            BrickType.X -> {
-                for (x in minOf(xl, xr)..maxOf(xl, xr)) {
-                    check(area[zl][x][yl] == null)
-
-                    area[zl][x][yl] = brick
-                }
-            }
-
-            BrickType.Y -> {
-                for (y in minOf(yl, yr)..maxOf(yl, yr)) {
-                    check(area[zl][xl][y] == null)
-
-                    area[zl][xl][y] = brick
-                }
-            }
-
-            BrickType.Z -> {
-                for (z in minOf(zl, zr)..maxOf(zl, zr)) {
-                    check(area[z][xl][yl] == null)
-
-                    area[z][xl][yl] = brick
-                }
+    for ((i, bi) in sortedBricks.withIndex()) {
+        for ((j, bj) in sortedBricks.subList(0, i).withIndex()) {
+            if (bj.overlaps(bi) && bi[2] == bj[5] + 1) {
+                kv[j] += i
+                vk[i] += j
             }
         }
     }
 
-    val typedBricks = groupBy { it.type }
-    for ((type, bricks) in typedBricks) {
-        // TODO (komarov): squash empty layers
-    }
-
-    return area
+    return Triple(
+        sortedBricks,
+        kv.map { it.toSet() }.toTypedArray(),
+        vk.map { it.toSet() }.toTypedArray()
+    )
 }
 
-private fun List<Brick>.countDisintegrated(): Int {
-    var count = 0
-    val area = project()
+private fun List<IntArray>.countDisintegrated(): Int {
+    val (bricks, kv, vk) = sortAndMap()
+    val count = bricks.indices.count { i ->
+        val kvi = kv[i]
 
-    // TODO (komarov): implement
+        kvi.all { j ->
+            val vkj = vk[j]
+
+            vkj.size >= 2
+        }
+    }
 
     return count
 }
@@ -234,12 +195,66 @@ private fun List<Brick>.countDisintegrated(): Int {
  */
 private fun part1(lines: List<String>): Int {
     val bricks = lines.parse()
+    val count = bricks.countDisintegrated()
 
-    return bricks.countDisintegrated()
+    return count
 }
 
+/**
+ * --- Part Two ---
+ *
+ * Disintegrating bricks one at a time isn't going to be fast enough. While it might sound dangerous, what you really need is a chain reaction.
+ *
+ * You'll need to figure out the best brick to disintegrate. For each brick, determine how many other bricks would fall if that brick were disintegrated.
+ *
+ * Using the same example as above:
+ *
+ *     Disintegrating brick A would cause all 6 other bricks to fall.
+ *     Disintegrating brick F would cause only 1 other brick, G, to fall.
+ *
+ * Disintegrating any other brick would cause no other bricks to fall. So, in this example, the sum of the number of other bricks that would fall as a result of disintegrating each brick is 7.
+ *
+ * For each brick, determine how many other bricks would fall if that brick were disintegrated. What is the sum of the number of other bricks that would fall?
+ *
+ */
 private fun part2(lines: List<String>): Int {
-    return lines.size
+    val bricks = lines.parse()
+    val count = bricks.countOthersFalling()
+
+    return count
+}
+
+private fun List<IntArray>.countOthersFalling(): Int {
+    val (bricks, kv, vk) = sortAndMap()
+    val count = bricks.indices.sumOf { i ->
+        val deque = kv[i]
+            .filter { j ->
+                val vkj = vk[j]
+
+                vkj.size == 1
+            }
+            .toCollection(LinkedList())
+        val falling = deque.toMutableSet()
+        falling += i
+
+        while (deque.isNotEmpty()) {
+            val j = deque.remove()
+            val kvj = kv[j]
+
+            for (k in kvj - falling) {
+                val vkk = vk[k]
+
+                if (falling.containsAll(vkk)) {
+                    deque += k
+                    falling += k
+                }
+            }
+        }
+
+        falling.size - 1
+    }
+
+    return count
 }
 
 fun main() {
@@ -250,7 +265,7 @@ fun main() {
     check(part1(testInput) == 5)
     part1(input).println()
 
-    check(part2(testInput) == 16)
+    check(part2(testInput) == 7)
     part2(input).println()
 
 }
