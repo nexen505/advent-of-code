@@ -3,6 +3,16 @@ package aoc_2022
 import println
 import readInput
 
+private fun List<String>.toRanges(): Sequence<Pair<IntRange, IntRange>> = asSequence().map { line ->
+    val (left, right) = line.split(',')
+    val (li, lj) = left.split("-").map { it.toInt() }
+    val (ri, rj) = right.split("-").map { it.toInt() }
+    val lr = li..lj
+    val rr = ri..rj
+
+    lr to rr
+}
+
 /**
  * --- Day 4: Camp Cleanup ---
  *
@@ -50,13 +60,11 @@ import readInput
  * In how many assignment pairs does one range fully contain the other?
  *
  */
-private fun part1(lines: List<String>): Int = lines.count { line ->
-    val (left, right) = line.split(',')
-    val (li, lj) = left.split("-").map { it.toInt() }
-    val (ri, rj) = right.split("-").map { it.toInt() }
-
-    (li in ri..rj && lj in ri..rj) || (ri in li..lj && rj in li..lj)
-}
+private fun part1(lines: List<String>): Int = lines
+    .toRanges()
+    .count { (l, r) ->
+        (l.first in r && l.last in r) || (r.first in l && r.last in l)
+    }
 
 /**
  * --- Part Two ---
@@ -75,16 +83,11 @@ private fun part1(lines: List<String>): Int = lines.count { line ->
  * In how many assignment pairs do the ranges overlap?
  *
  */
-private fun part2(lines: List<String>): Int = lines.count { line ->
-    val (left, right) = line.split(',')
-    val (li, lj) = left.split("-").map { it.toInt() }
-    val (ri, rj) = right.split("-").map { it.toInt() }
-    val lr = li..lj
-    val rr = ri..rj
-    val intersection = lr.intersect(rr)
-
-    intersection.isNotEmpty()
-}
+private fun part2(lines: List<String>): Int = lines
+    .toRanges()
+    .count { (l, r) ->
+        r.any { l.contains(it) } || l.any { r.contains(it) }
+    }
 
 fun main() {
 
