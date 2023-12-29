@@ -269,7 +269,20 @@ private fun part1(lines: List<String>): Int {
     val head = IntArray(2)
     val tail = IntArray(2)
     val visited = mutableSetOf(tail[0] to tail[1])
-    for ((direction, steps) in motions) {
+    motions.move { (dx, dy) ->
+        head[0] += dx
+        head[1] += dy
+
+        moveTail(head, tail)
+
+        visited += tail[0] to tail[1]
+    }
+
+    return visited.size
+}
+
+private inline fun List<Pair<Direction, Int>>.move(action: (Pair<Int, Int>) -> Unit) {
+    for ((direction, steps) in this) {
         val dx = when (direction) {
             Direction.RIGHT -> 1
             Direction.LEFT -> -1
@@ -282,16 +295,9 @@ private fun part1(lines: List<String>): Int {
         }
 
         repeat(steps) {
-            head[0] += dx
-            head[1] += dy
-
-            moveTail(head, tail)
-
-            visited += tail[0] to tail[1]
+            action.invoke(dx to dy)
         }
     }
-
-    return visited.size
 }
 
 /**
@@ -736,31 +742,18 @@ private fun part2(lines: List<String>): Int {
 
     val rope = Array(10) { IntArray(2) }
     val visited = mutableSetOf(rope.last().let { it[0] to it[1] })
-    for ((direction, steps) in motions) {
-        val dx = when (direction) {
-            Direction.RIGHT -> 1
-            Direction.LEFT -> -1
-            else -> 0
+    motions.move { (dx, dy) ->
+        rope[0][0] += dx
+        rope[0][1] += dy
+
+        for (i in 0..<rope.size - 1) {
+            val head = rope[i]
+            val tail = rope[i + 1]
+
+            moveTail(head, tail)
         }
-        val dy = when (direction) {
-            Direction.UP -> 1
-            Direction.DOWN -> -1
-            else -> 0
-        }
 
-        repeat(steps) {
-            rope[0][0] += dx
-            rope[0][1] += dy
-
-            for (i in 0..<rope.size - 1) {
-                val head = rope[i]
-                val tail = rope[i + 1]
-
-                moveTail(head, tail)
-            }
-
-            visited += rope.last().let { it[0] to it[1] }
-        }
+        visited += rope.last().let { it[0] to it[1] }
     }
 
     return visited.size
