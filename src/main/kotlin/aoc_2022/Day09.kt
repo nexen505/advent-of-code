@@ -285,18 +285,7 @@ private fun part1(lines: List<String>): Int {
             head[0] += dx
             head[1] += dy
 
-            val htx = head[0] - tail[0]
-            val hty = head[1] - tail[1]
-            if (htx.absoluteValue > 1 || hty.absoluteValue > 1) {
-                if (htx == 0) {
-                    tail[1] += hty / 2
-                } else if (hty == 0) {
-                    tail[0] += htx / 2
-                } else {
-                    tail[0] += if (htx > 0) 1 else -1
-                    tail[1] += if (hty > 0) 1 else -1
-                }
-            }
+            moveTail(head, tail)
 
             visited += tail[0] to tail[1]
         }
@@ -767,18 +756,7 @@ private fun part2(lines: List<String>): Int {
                 val head = rope[i]
                 val tail = rope[i + 1]
 
-                val htx = head[0] - tail[0]
-                val hty = head[1] - tail[1]
-                if (htx.absoluteValue > 1 || hty.absoluteValue > 1) {
-                    if (htx == 0) {
-                        tail[1] += hty / 2
-                    } else if (hty == 0) {
-                        tail[0] += htx / 2
-                    } else {
-                        tail[0] += if (htx > 0) 1 else -1
-                        tail[1] += if (hty > 0) 1 else -1
-                    }
-                }
+                moveTail(head, tail)
             }
 
             visited += rope.last().let { it[0] to it[1] }
@@ -786,6 +764,22 @@ private fun part2(lines: List<String>): Int {
     }
 
     return visited.size
+}
+
+private fun moveTail(head: IntArray, tail: IntArray) {
+    val htx = head[0] - tail[0]
+    val hty = head[1] - tail[1]
+
+    if (htx.absoluteValue > 1 || hty.absoluteValue > 1) {
+        if (htx == 0) {
+            tail[1] += hty / 2
+        } else if (hty == 0) {
+            tail[0] += htx / 2
+        } else {
+            tail[0] += if (htx > 0) 1 else -1
+            tail[1] += if (hty > 0) 1 else -1
+        }
+    }
 }
 
 fun main() {
