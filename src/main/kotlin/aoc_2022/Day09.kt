@@ -266,23 +266,14 @@ private fun List<String>.parse(): List<Pair<Direction, Int>> = map { it.parse() 
 private fun part1(lines: List<String>): Int {
     val motions = lines.parse()
 
-    val head = IntArray(2)
-    val tail = IntArray(2)
-    val visited = mutableSetOf(tail[0] to tail[1])
-    motions.move { (dx, dy) ->
-        head[0] += dx
-        head[1] += dy
-
-        moveTail(head, tail)
-
-        visited += tail[0] to tail[1]
-    }
-
-    return visited.size
+    return calculateRoped(motions, 2)
 }
 
-private inline fun List<Pair<Direction, Int>>.move(action: (Pair<Int, Int>) -> Unit) {
-    for ((direction, steps) in this) {
+private fun calculateRoped(motions: List<Pair<Direction, Int>>, ropeLength: Int): Int {
+    val rope = List(ropeLength) { IntArray(2) }
+    val visited = mutableSetOf(rope.last().let { it[0] to it[1] })
+
+    for ((direction, steps) in motions) {
         val dx = when (direction) {
             Direction.RIGHT -> 1
             Direction.LEFT -> -1
@@ -295,9 +286,30 @@ private inline fun List<Pair<Direction, Int>>.move(action: (Pair<Int, Int>) -> U
         }
 
         repeat(steps) {
-            action.invoke(dx to dy)
+            rope[0][0] += dx
+            rope[0][1] += dy
+
+            for ((head, tail) in rope.windowed(2)) {
+                val htx = head[0] - tail[0]
+                val hty = head[1] - tail[1]
+
+                if (htx.absoluteValue > 1 || hty.absoluteValue > 1) {
+                    if (htx == 0) {
+                        tail[1] += hty / 2
+                    } else if (hty == 0) {
+                        tail[0] += htx / 2
+                    } else {
+                        tail[0] += if (htx > 0) 1 else -1
+                        tail[1] += if (hty > 0) 1 else -1
+                    }
+                }
+            }
+
+            visited += rope.last().let { it[0] to it[1] }
         }
     }
+
+    return visited.size
 }
 
 /**
@@ -740,39 +752,7 @@ private inline fun List<Pair<Direction, Int>>.move(action: (Pair<Int, Int>) -> U
 private fun part2(lines: List<String>): Int {
     val motions = lines.parse()
 
-    val rope = Array(10) { IntArray(2) }
-    val visited = mutableSetOf(rope.last().let { it[0] to it[1] })
-    motions.move { (dx, dy) ->
-        rope[0][0] += dx
-        rope[0][1] += dy
-
-        for (i in 0..<rope.size - 1) {
-            val head = rope[i]
-            val tail = rope[i + 1]
-
-            moveTail(head, tail)
-        }
-
-        visited += rope.last().let { it[0] to it[1] }
-    }
-
-    return visited.size
-}
-
-private fun moveTail(head: IntArray, tail: IntArray) {
-    val htx = head[0] - tail[0]
-    val hty = head[1] - tail[1]
-
-    if (htx.absoluteValue > 1 || hty.absoluteValue > 1) {
-        if (htx == 0) {
-            tail[1] += hty / 2
-        } else if (hty == 0) {
-            tail[0] += htx / 2
-        } else {
-            tail[0] += if (htx > 0) 1 else -1
-            tail[1] += if (hty > 0) 1 else -1
-        }
-    }
+    return calculateRoped(motions, 10)
 }
 
 fun main() {
