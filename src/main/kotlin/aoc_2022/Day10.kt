@@ -48,7 +48,8 @@ private fun part2(lines: List<String>, factor: Int = 1): List<String> {
 
     val rows = crt
         .asSequence()
-        .flatMap { c -> sequenceOf(*Array(factor) { c }) }
+        .map { c -> Array(factor) { c } }
+        .flatMap { it.asSequence() }
         .chunked(rowLength * factor) { it.joinToString("") }
         .toList()
     return rows
