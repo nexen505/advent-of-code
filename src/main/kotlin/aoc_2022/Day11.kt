@@ -1,5 +1,6 @@
 package aoc_2022
 
+import lcm
 import mul
 import println
 import readInput
@@ -127,7 +128,7 @@ private fun part2(lines: List<String>): Long {
     val mod = monkeys
         .values
         .map { it.test }
-        .mul()
+        .lcm()
 
     return goRounds(monkeys, 10000) { it % mod }
 }
