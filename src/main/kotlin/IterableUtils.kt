@@ -25,3 +25,5 @@ fun Iterable<Pair<Long, Long>>.calculateInterior(): Double = calculateArea() - c
 
 private fun Iterable<Pair<Long, Long>>.cycle(): Sequence<List<Pair<Long, Long>>> =
     asSequence().windowed(2) + sequenceOf(listOf(last(), first()))
+
+fun Iterable<Long>.mul(): Long = fold(1L) { a, b -> a * b }
