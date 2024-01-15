@@ -27,9 +27,6 @@ fun Any?.println() = println(this)
 private tailrec infix fun Long.gcd(b: Long): Long = if (b == 0L) this else b gcd (this % b)
 infix fun Long.lcm(b: Long): Long = this * b / (this gcd b)
 
-fun Iterable<Long>.lcm(): Long = fold(1L) { res, v -> res lcm v }
-fun Sequence<Long>.lcm(): Long = fold(1L) { res, v -> res lcm v }
-
 enum class Direction {
     UP, RIGHT, DOWN, LEFT;
 

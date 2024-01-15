@@ -27,3 +27,8 @@ private fun Iterable<Pair<Long, Long>>.cycle(): Sequence<List<Pair<Long, Long>>>
     asSequence().windowed(2) + sequenceOf(listOf(last(), first()))
 
 fun Iterable<Long>.mul(): Long = fold(1L) { a, b -> a * b }
+
+fun Iterable<Long>.lcm(): Long = fold(1L) { res, v -> res lcm v }
+fun Sequence<Long>.lcm(): Long = fold(1L) { res, v -> res lcm v }
+
+fun <T> List<T>.equalsIgnoreOrder(other: List<T>) = this.size == other.size && this.toSet() == other.toSet()
