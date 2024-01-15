@@ -9,15 +9,10 @@ import readInput
 private val objectMapper = jacksonObjectMapper()
 
 private val comparator: Comparator<List<*>> = Comparator { a, b ->
-    fun inRightOrder(a: List<*>, b: List<*>): Int {
-        val an = a.size
-        val bn = b.size
-        val n = minOf(an, bn)
-
-        for (i in 0 until n) {
-            val ai = a[i]
-            val bi = b[i]
-            val cmp = when (ai) {
+    fun inRightOrder(a: List<*>, b: List<*>): Int = a.asSequence()
+        .zip(b.asSequence())
+        .map { (ai, bi) ->
+            when (ai) {
                 is Int -> when (bi) {
                     is Int -> ai.compareTo(bi)
                     is List<*> -> inRightOrder(listOf(ai), bi)
@@ -32,14 +27,9 @@ private val comparator: Comparator<List<*>> = Comparator { a, b ->
 
                 else -> error("Unexpected type: ${ai?.javaClass}")
             }
-
-            if (cmp != 0) {
-                return cmp
-            }
         }
-
-        return an.compareTo(bn)
-    }
+        .firstOrNull { it != 0 }
+        ?: a.size.compareTo(b.size)
 
     inRightOrder(a, b)
 }
