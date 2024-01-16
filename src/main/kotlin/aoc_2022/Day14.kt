@@ -3,36 +3,32 @@ package aoc_2022
 import println
 import readInput
 
-private const val AIR = '.'
-private const val ROCK = '#'
-private const val SAND = 'o'
+private fun List<String>.toRocks(): Set<Pair<Int, Int>> = asSequence()
+    .flatMap { s ->
+        s.splitToSequence("->")
+            .map { it.trim() }
+            .map { it.split(',') }
+            .map { (l, r) -> l.toInt() to r.toInt() }
+            .windowed(2, partialWindows = false) { (a, b) ->
+                val (aj, ai) = a
+                val (bj, bi) = b
+                val ri = (minOf(ai, bi)..maxOf(ai, bi)).asSequence()
+                val rj = (minOf(aj, bj)..maxOf(aj, bj)).asSequence()
 
-private fun List<String>.toRocks(): Set<Pair<Int, Int>> = map { s ->
-    s.split("->")
-        .map { it.trim() }
-        .map {
-            val (l, r) = it.split(',')
-
-            l.toInt() to r.toInt()
-        }
-}
-    .flatMap { l ->
-        val rocks = l
-            .windowed(2, partialWindows = false)
-            .map { (a, b) ->
-                val (ai, aj) = a
-                val (bi, bj) = b
-
-                (minOf(ai, bi)..maxOf(ai, bi))
-                    .map { aik ->
-                        (minOf(aj, bj)..maxOf(aj, bj)).map { ajk -> ajk to aik }
-                    }
+                ri
+                    .map { aik -> rj.map { ajk -> aik to ajk } }
                     .flatten()
             }
-
-        rocks.flatten()
+            .flatten()
     }
     .toSet()
+
+private fun List<String>.toRocksWithAbyss(): Pair<Set<Pair<Int, Int>>, Int> {
+    val rocks = toRocks()
+    val abyss = rocks.maxOf { it.first } + 1
+
+    return rocks to abyss
+}
 
 /**
  * --- Day 14: Regolith Reservoir ---
@@ -157,12 +153,10 @@ private fun List<String>.toRocks(): Set<Pair<Int, Int>> = map { s ->
  * ~..........
  *
  * Using your scan, simulate the falling sand. How many units of sand come to rest before sand starts flowing into the abyss below?
- *
  */
 private fun part1(lines: List<String>): Int {
-    val rocks = lines.toRocks()
+    val (rocks, abyss) = lines.toRocksWithAbyss()
     val filled = rocks.toMutableSet()
-    val abyss = filled.maxOf { it.first } + 1
     var c = 0
 
     while (true) {
@@ -173,25 +167,16 @@ private fun part1(lines: List<String>): Int {
                 return c
             }
 
-            if (cur.first + 1 to cur.second !in filled) {
-                cur = cur.first + 1 to cur.second
-                continue
+            cur = when {
+                cur.first + 1 to cur.second !in filled -> cur.first + 1 to cur.second
+                cur.first + 1 to cur.second - 1 !in filled -> cur.first + 1 to cur.second - 1
+                cur.first + 1 to cur.second + 1 !in filled -> cur.first + 1 to cur.second + 1
+                else -> break
             }
-
-            if (cur.first + 1 to cur.second - 1 !in filled) {
-                cur = cur.first + 1 to cur.second - 1
-                continue
-            }
-
-            if (cur.first + 1 to cur.second + 1 !in filled) {
-                cur = cur.first + 1 to cur.second + 1
-                continue
-            }
-
-            filled += cur
-            ++c
-            break
         }
+
+        filled += cur
+        ++c
     }
 }
 
@@ -233,39 +218,23 @@ private fun part1(lines: List<String>): Int {
  * #########################
  *
  * Using your scan, simulate the falling sand until the source of the sand becomes blocked. How many units of sand come to rest?
- *
  */
 private fun part2(lines: List<String>): Int {
-    val rocks = lines.toRocks()
+    val (rocks, abyss) = lines.toRocksWithAbyss()
     val filled = rocks.toMutableSet()
-    val abyss = filled.maxOf { it.first } + 1
     var c = 0
-
     val start = 0 to 500
+
     while (start !in filled) {
         var cur = start
 
-        while (true) {
-            if (cur.first >= abyss) {
-                break
+        while (cur.first < abyss) {
+            cur = when {
+                cur.first + 1 to cur.second !in filled -> cur.first + 1 to cur.second
+                cur.first + 1 to cur.second - 1 !in filled -> cur.first + 1 to cur.second - 1
+                cur.first + 1 to cur.second + 1 !in filled -> cur.first + 1 to cur.second + 1
+                else -> break
             }
-
-            if (cur.first + 1 to cur.second !in filled) {
-                cur = cur.first + 1 to cur.second
-                continue
-            }
-
-            if (cur.first + 1 to cur.second - 1 !in filled) {
-                cur = cur.first + 1 to cur.second - 1
-                continue
-            }
-
-            if (cur.first + 1 to cur.second + 1 !in filled) {
-                cur = cur.first + 1 to cur.second + 1
-                continue
-            }
-
-            break
         }
 
         filled += cur
