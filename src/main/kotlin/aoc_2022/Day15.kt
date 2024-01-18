@@ -1,16 +1,12 @@
 package aoc_2022
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import println
 import readInput
 import kotlin.math.abs
 
 typealias Point = Pair<Long, Long>
 
+private val INTERVALS_COMPARATOR = compareBy<LongRange> { it.first }.thenBy { it.last }
 private val POINT_REGEX = "x=(-?\\d+), y=(-?\\d+)".toRegex()
 
 private fun String.toBeaconSensor(): Pair<Point, Point> = split(':')
@@ -32,6 +28,45 @@ private fun Point.distance(other: Point): Long {
     val (x1, y1) = other
 
     return abs(x1 - x0) + abs(y1 - y0)
+}
+
+private fun List<Pair<Point, Point>>.calculateForbiddenRanges(y: Long): List<LongRange> {
+    val ranges = mutableListOf<LongRange>()
+    for ((s, b) in this) {
+        val d = s.distance(b)
+        val (sx, sy) = s
+        val dx = d - abs(sy - y)
+        if (dx < 0) {
+            continue
+        }
+
+        ranges += sx - dx..sx + dx
+    }
+
+    ranges.sortWith(INTERVALS_COMPARATOR)
+
+    val forbiddenRanges = mutableListOf<LongRange>()
+    for (range in ranges) {
+        if (forbiddenRanges.isEmpty()) {
+            forbiddenRanges += range
+            continue
+        }
+
+        val lo = range.first
+        val hi = range.last
+        val last = forbiddenRanges.last()
+        val qlo = last.first
+        val qhi = last.last
+        if (lo > qhi + 1) {
+            forbiddenRanges += lo..hi
+            continue
+        }
+
+        forbiddenRanges.removeLast()
+        forbiddenRanges += qlo..maxOf(qhi, hi)
+    }
+
+    return forbiddenRanges
 }
 
 /**
@@ -136,33 +171,23 @@ private fun Point.distance(other: Point): Long {
  *
  * Consult the report from the sensors you just deployed. In the row where y=2000000, how many positions cannot contain a beacon?
  */
-private fun part1(lines: List<String>, y: Long = 2000000): Int {
+private fun part1(lines: List<String>, y: Long = 2000000): Long {
     val sensors = lines.toBeaconSensors()
-    val distances = sensors.associate { (s, b) -> s to s.distance(b) }
-    val minX = sensors
+    val known = sensors
         .asSequence()
-        .flatMap { (s, b) ->
-            val distance = distances[s]!!
+        .map { it.second }
+        .filter { it.second == y }
+        .map { it.first }
+        .toSet()
+    val ranges = sensors.calculateForbiddenRanges(y)
+    val result = ranges.sumOf { range ->
+        val lo = range.first
+        val hi = range.last
 
-            sequenceOf(s.first - distance, b.first - distance)
-        }
-        .min()
-    val maxX = sensors
-        .asSequence()
-        .flatMap { (s, b) ->
-            val distance = distances[s]!!
+        hi - lo + 1 - known.count { it in range }
+    }
 
-            sequenceOf(s.first + distance, b.first + distance)
-        }
-        .max()
-    val count = (minX..maxX)
-        .asSequence()
-        .map { it to y }
-        .filter { sensors.none { (s, b) -> s == it || b == it } }
-        .filter { distances.entries.any { (s, d) -> s.distance(it) <= d } }
-        .count()
-
-    return count
+    return result
 }
 
 /**
@@ -178,47 +203,22 @@ private fun part1(lines: List<String>, y: Long = 2000000): Int {
  */
 private fun part2(lines: List<String>, range: LongRange = 0..4000000L): Long {
     val sensors = lines.toBeaconSensors()
-    val points = sensors
-        .asSequence()
-        .flatMap { it.toList() }
-        .toSet()
-    val distances = sensors.associate { (s, b) -> s to s.distance(b) }
-    val result = runBlocking(Dispatchers.Default) {
-        val channel = Channel<Point>()
-        val job = launch {
-            for (y in range.reversed()) {
-                launch {
-                    for (x in range.reversed()) {
-                        if (!isActive) {
-                            break
-                        }
+    for (y in range) {
+        val forbiddenRanges = sensors.calculateForbiddenRanges(y)
 
-                        val p = x to y
-                        if (p in points) {
-                            continue
-                        }
-
-                        val found = distances.entries.all { (s, d) -> s.distance(p) > d }
-                        if (found) {
-                            channel.send(p)
-                            channel.close()
-                            break
-                        }
-                    }
-                }
+        var x = range.first
+        val forbiddenRangesItr = forbiddenRanges.iterator()
+        while (x in range && forbiddenRangesItr.hasNext()) {
+            val forbiddenRange = forbiddenRangesItr.next()
+            if (x !in forbiddenRange) {
+                return x * 4000000 + y
             }
-        }
 
-        try {
-            channel
-                .receive()
-                .let { (x, y) -> x * 4000000 + y }
-        } finally {
-            job.cancel()
+            x = maxOf(x, forbiddenRange.last + 1)
         }
     }
 
-    return result
+    error("Should never be reached")
 }
 
 fun main() {
@@ -226,7 +226,7 @@ fun main() {
     val testInput = readInput("aoc_2022/Day15_test")
     val input = readInput("aoc_2022/Day15")
 
-    check(part1(testInput, 10) == 26)
+    check(part1(testInput, 10) == 26L)
     part1(input).println()
 
     check(part2(testInput, 0..20L) == 56000011L)
