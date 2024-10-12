@@ -1,16 +1,16 @@
 plugins {
-    kotlin("jvm") version "1.9.21"
+    kotlin("jvm") version "2.0.20"
 }
 
 dependencies {
-    implementation(platform("com.fasterxml.jackson:jackson-bom:2.16.1"))
+    implementation(platform("com.fasterxml.jackson:jackson-bom:2.18.0"))
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
 }
 
 tasks {
     wrapper {
-        gradleVersion = "8.5"
+        gradleVersion = "8.10.2"
     }
 }
