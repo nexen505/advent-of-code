@@ -2,7 +2,6 @@ package aoc_2024
 
 import println
 import readInput
-import java.util.SortedMap
 import kotlin.math.abs
 
 /**
@@ -49,7 +48,9 @@ import kotlin.math.abs
  * Your actual left and right lists contain many location IDs. What is the total distance between your lists?
  */
 private fun part1(lines: List<String>): Long {
-    val (left, right) = countNumbers(lines)
+    val (left, right) = countNumbers(lines).let { (l, r) ->
+        l.toSortedMap() to r.toSortedMap()
+    }
 
     var sum = 0L
     while (left.isNotEmpty() && right.isNotEmpty()) {
@@ -63,12 +64,14 @@ private fun part1(lines: List<String>): Long {
             val leftEntry = left.firstEntry()!!
             val rightEntry = right.firstEntry()!!
             val diff = minOf(leftEntry.value, rightEntry.value)
-            sum += abs(leftEntry.key - rightEntry.key) * diff
+            val lk = leftEntry.key
+            val rk = rightEntry.key
 
-            left.computeIfPresent(leftEntry.key) { _, v ->
+            sum += diff * abs(lk - rk)
+            left.computeIfPresent(lk) { _, v ->
                 if (v == diff) null else (v - diff)
             }
-            right.computeIfPresent(rightEntry.key) { _, v ->
+            right.computeIfPresent(rk) { _, v ->
                 if (v == diff) null else (v - diff)
             }
         }
@@ -77,22 +80,30 @@ private fun part1(lines: List<String>): Long {
     return sum
 }
 
-private fun countNumbers(lines: List<String>): Pair<SortedMap<Long, Long>, SortedMap<Long, Long>> {
-    val left = sortedMapOf<Long, Long>()
-    val right = sortedMapOf<Long, Long>()
-    lines.forEach { line ->
-        val vals = line.splitToSequence(' ')
-            .map { it.trim() }
-            .filterNot { it.isEmpty() }
-            .map { it.toLong() }
-            .toList()
+private fun countNumbers(lines: Iterable<String>): Pair<Map<Long, Int>, Map<Long, Int>> {
+    val (left, right) = parseNumbers(lines)
 
-        left.merge(vals.first(), 1) { a, b -> a + b }
-        right.merge(vals.last(), 1) { a, b -> a + b }
+    return left.countEach() to right.countEach()
+}
+
+private fun parseNumbers(lines: Iterable<String>): Pair<List<Long>, List<Long>> {
+    val left = mutableListOf<Long>()
+    val right = mutableListOf<Long>()
+
+    lines.forEach { line ->
+        val (lv, rv) = line
+            .split("   ")
+            .map { it.toLong() }
+            .apply { first() to last() }
+
+        left += lv
+        right += rv
     }
 
     return left to right
 }
+
+private fun List<Long>.countEach() = groupingBy { it }.eachCount()
 
 /**
  * --- Part Two ---
@@ -131,10 +142,10 @@ private fun part2(lines: List<String>): Long {
     val (left, right) = countNumbers(lines)
 
     return left
-        .keys
+        .entries
         .asSequence()
-        .filter { it in right }
-        .sumOf { it * left[it]!! * right[it]!! }
+        .filter { it.key in right }
+        .sumOf { it.key * it.value * right[it.key]!! }
 }
 
 fun main() {
