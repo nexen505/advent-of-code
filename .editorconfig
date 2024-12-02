@@ -1,0 +1,31 @@
+# IntelliJ allows to export the code style in the .editorconfig format. These are the settings
+# from the most recent settings for SquareAndroid from here:
+#
+# https://github.com/square/java-code-styles
+#
+# Every time someone changes Square's code style we should update the config here, too. These
+# settings override the selected code style. This means nobody needs to import the code style
+# anymore and we can change settings for all developers here at once.
+#
+# Some keys were manually changed:
+#   * insert_final_newline (is false, changed to true, expected by KtLint)
+#   * ktlint_ignore_back_ticked_identifier (enabled, see comment below)
+#   * root (see comment below)
+
+# Tells tools to stop searching upwards.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = space
+insert_final_newline = true
+max_line_length = 100
+tab_width = 4
+ij_continuation_indent_size = 4
+ij_formatter_off_tag = @formatter:off
+ij_formatter_on_tag = @formatter:on
+ij_formatter_tags_enabled = false
+ij_smart_tabs = false
+ij_wrap_on_typing = false
