@@ -10,7 +10,7 @@ fun readInput(name: String, removeBlank: Boolean = true) = Thread
     .getResource("$name.txt")!!
     .readText()
     .lines()
-    .let { if (removeBlank) it.filter { it.isNotBlank() } else it }
+    .let { line -> if (removeBlank) line.filter { it.isNotBlank() } else line }
 
 /**
  * Converts string to md5 hash.
