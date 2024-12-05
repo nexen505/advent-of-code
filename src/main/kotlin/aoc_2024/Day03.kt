@@ -31,7 +31,11 @@ private fun part1(lines: List<String>): Long = lines.asSequence()
     .flatMap { MUL.findAll(it) }
     .sumOf { it.mul() }
 
-private fun MatchResult.mul(): Long = groupValues[1].toLong() * groupValues[2].toLong()
+private fun MatchResult.mul(): Long {
+    val (left, right) = destructured
+
+    return left.toLong() * right.toLong()
+}
 
 /**
  * --- Part Two ---
