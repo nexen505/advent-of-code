@@ -28,12 +28,12 @@ private fun List<Int>.isSoftlySafe(): Boolean = indices.any {
 }
 
 fun main() {
-    val testInput2 = readInput("aoc_2024/Day02_test")
+    val testInput = readInput("aoc_2024/Day02_test")
     val input = readInput("aoc_2024/Day02")
 
-    check(part1(testInput2) == 2)
+    check(part1(testInput) == 2)
     part1(input).println()
 
-    check(part2(testInput2) == 4)
+    check(part2(testInput) == 4)
     part2(input).println()
 }

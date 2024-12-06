@@ -142,12 +142,12 @@ private fun part2(lines: List<String>): Long {
 }
 
 fun main() {
-    val testInput1 = readInput("aoc_2024/Day04_test")
+    val testInput = readInput("aoc_2024/Day04_test")
     val input = readInput("aoc_2024/Day04")
 
-    check(part1(testInput1) == 18L)
+    check(part1(testInput) == 18L)
     part1(input).println()
 
-    check(part2(testInput1) == 9L)
+    check(part2(testInput) == 9L)
     part2(input).println()
 }

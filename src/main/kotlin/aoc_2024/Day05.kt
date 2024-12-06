@@ -86,7 +86,7 @@ import readInput
 private fun part1(lines: List<String>): Long = lines
     .updates(lines.extractRules())
     .filter { it.second }
-    .sumOf { it.first[it.first.size / 2].toLong() }
+    .sumOf { it.first[it.first.size / 2] }
 
 private fun List<String>.updates(rules: Map<Long, Set<Long>>): Sequence<Pair<List<Long>, Boolean>> =
     sequence {
@@ -153,12 +153,12 @@ private fun part2(lines: List<String>): Long {
 }
 
 fun main() {
-    val testInput1 = readInput("aoc_2024/Day05_test")
+    val testInput = readInput("aoc_2024/Day05_test")
     val input = readInput("aoc_2024/Day05")
 
-    check(part1(testInput1) == 143L)
+    check(part1(testInput) == 143L)
     part1(input).println()
 
-    check(part2(testInput1) == 123L)
+    check(part2(testInput) == 123L)
     part2(input).println()
 }
