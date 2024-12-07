@@ -1,7 +1,11 @@
 package aoc_2024
 
+import aoc_2024.Op.CONCAT
+import aoc_2024.Op.MUL
+import aoc_2024.Op.PLUS
 import println
 import readInput
+import java.util.EnumSet
 
 private enum class Op {
     PLUS, MUL, CONCAT
@@ -45,7 +49,7 @@ private enum class Op {
 private fun part1(lines: List<String>): Long = lines
     .asSequence()
     .map { it.parse() }
-    .filter { it.evaluated(setOf(Op.PLUS, Op.MUL)) }
+    .filter { it.evaluated(EnumSet.of(PLUS, MUL)) }
     .sumOf { it.first }
 
 private fun String.parse(): Pair<Long, List<Long>> = split(": ").let { (left, right) ->
@@ -53,35 +57,35 @@ private fun String.parse(): Pair<Long, List<Long>> = split(": ").let { (left, ri
 }
 
 private fun Pair<Long, List<Long>>.evaluated(ops: Set<Op>): Boolean {
-    val (res, vals) = this
-    require(vals.isNotEmpty())
-
-    val last = vals.last()
-    val candidates = vals.subList(0, vals.size - 1)
+    val (target, nums) = this
+    val candidates = nums.toMutableList()
+    val last = candidates.removeLast()
     if (candidates.isEmpty()) {
-        return res == last
+        return target == last
     }
 
     for (op in ops) {
         when (op) {
-            Op.PLUS -> {
-                if (res > last && (res - last to candidates).evaluated(ops)) {
+            PLUS -> {
+                if (target > last && (target - last to candidates).evaluated(ops)) {
                     return true
                 }
             }
 
-            Op.MUL -> {
-                if (res % last == 0L && (res / last to candidates).evaluated(ops)) {
+            MUL -> {
+                if (target % last == 0L && (target / last to candidates).evaluated(ops)) {
                     return true
                 }
             }
 
-            Op.CONCAT -> {
-                val rs = res.toString()
-                val ls = last.toString()
-                if (rs.endsWith(ls)
-                    && rs.length > ls.length
-                    && (rs.substringBeforeLast(ls).toLong() to candidates).evaluated(ops)
+            CONCAT -> {
+                val s = target.toString()
+                val newTarget = s.removeSuffix(last.toString())
+
+                if (
+                    newTarget != s
+                    && newTarget.isNotEmpty()
+                    && (newTarget.toLong() to candidates).evaluated(ops)
                 ) {
                     return true
                 }
@@ -112,7 +116,7 @@ private fun Pair<Long, List<Long>>.evaluated(ops: Set<Op>): Boolean {
 private fun part2(lines: List<String>): Long = lines
     .asSequence()
     .map { it.parse() }
-    .filter { it.evaluated(Op.entries.toSet()) }
+    .filter { it.evaluated(EnumSet.allOf(Op::class.java)) }
     .sumOf { it.first }
 
 fun main() {
