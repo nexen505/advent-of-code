@@ -2,7 +2,6 @@ package aoc_2024
 
 import println
 import readInput
-import kotlin.math.pow
 
 private enum class Op {
     PLUS, MUL, CONCAT
@@ -55,27 +54,38 @@ private fun String.parse(): Pair<Long, List<Long>> = split(": ").let { (left, ri
 
 private fun Pair<Long, List<Long>>.evaluated(ops: Set<Op>): Boolean {
     val (res, vals) = this
+    require(vals.isNotEmpty())
 
-    val opsList = ops.toList()
-    val combs = ops.size.toDouble().pow(vals.size - 1).toLong()
-    for (i in 0 until combs) {
-        val expr = i
-            .toUInt()
-            .toString(ops.size)
-            .padStart(vals.size - 1, '0')
-            .map { opsList[it.digitToInt()] }
+    val last = vals.last()
+    val candidates = vals.subList(0, vals.size - 1)
+    if (candidates.isEmpty()) {
+        return res == last
+    }
 
-        var acc = vals.first()
-        for (j in 1..<vals.size) {
-            when (expr[j - 1]) {
-                Op.PLUS -> acc += vals[j]
-                Op.MUL -> acc *= vals[j]
-                Op.CONCAT -> acc = "$acc${vals[j]}".toLong()
+    for (op in ops) {
+        when (op) {
+            Op.PLUS -> {
+                if (res > last && (res - last to candidates).evaluated(ops)) {
+                    return true
+                }
             }
-        }
 
-        if (acc == res) {
-            return true
+            Op.MUL -> {
+                if (res % last == 0L && (res / last to candidates).evaluated(ops)) {
+                    return true
+                }
+            }
+
+            Op.CONCAT -> {
+                val rs = res.toString()
+                val ls = last.toString()
+                if (rs.endsWith(ls)
+                    && rs.length > ls.length
+                    && (rs.substringBeforeLast(ls).toLong() to candidates).evaluated(ops)
+                ) {
+                    return true
+                }
+            }
         }
     }
 
