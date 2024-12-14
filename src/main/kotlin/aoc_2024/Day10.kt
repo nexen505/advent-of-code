@@ -115,19 +115,17 @@ private fun List<List<Int>>.calculateScore(
     start: Pair<Int, Int>,
     destinations: Set<Pair<Int, Int>>
 ): Int {
-    val reached = mutableSetOf<Pair<Int, Int>>()
+    val toReach = destinations.toMutableSet()
 
     trail(start) { queue, _, next ->
-        if (next !in reached) {
-            if (next in destinations) {
-                reached += next
-            } else {
-                queue += next
-            }
+        if (next in toReach) {
+            toReach -= next
+        } else {
+            queue += next
         }
     }
 
-    return reached.size
+    return destinations.size - toReach.size
 }
 
 private fun List<List<Int>>.trail(
@@ -140,7 +138,7 @@ private fun List<List<Int>>.trail(
         val cur = queue.removeFirst()
         val v = this[cur.first][cur.second]
 
-        cur.getNeighbours()
+        cur.neighbours()
             .filter { (i, j) ->
                 i in indices && j in first().indices && this[i][j] == v + 1
             }
@@ -148,7 +146,7 @@ private fun List<List<Int>>.trail(
     }
 }
 
-private fun Pair<Int, Int>.getNeighbours(): Sequence<Pair<Int, Int>> =
+private fun Pair<Int, Int>.neighbours(): Sequence<Pair<Int, Int>> =
     sequenceOf(first - 1 to second, first + 1 to second, first to second - 1, first to second + 1)
 
 /**
@@ -220,17 +218,17 @@ private fun List<List<Int>>.calculateRating(
     start: Pair<Int, Int>,
     destinations: Set<Pair<Int, Int>>
 ): Int {
-    val reached = mutableMapOf<Pair<Int, Int>, Int>()
+    val destinationTrails = destinations.associateWithTo(mutableMapOf()) { 0 }
 
     trail(start) { queue, cur, next ->
-        if (next in reached || next in destinations) {
-            reached.merge(cur, 1, Int::plus)
+        if (next in destinationTrails) {
+            destinationTrails.merge(cur, 1, Int::plus)
         } else {
             queue += next
         }
     }
 
-    return reached.values.sum()
+    return destinationTrails.values.sum()
 }
 
 fun main() {
