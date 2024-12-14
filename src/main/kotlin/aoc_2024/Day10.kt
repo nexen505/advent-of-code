@@ -128,9 +128,9 @@ private fun List<List<Int>>.calculateScore(
     return destinations.size - toReach.size
 }
 
-private fun List<List<Int>>.trail(
+private inline fun List<List<Int>>.trail(
     start: Pair<Int, Int>,
-    f: (ArrayDeque<Pair<Int, Int>>, Pair<Int, Int>, Pair<Int, Int>) -> Unit
+    crossinline f: (ArrayDeque<Pair<Int, Int>>, Pair<Int, Int>, Pair<Int, Int>) -> Unit
 ) {
     val queue = ArrayDeque(listOf(start))
 
